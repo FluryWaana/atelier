@@ -1,31 +1,35 @@
-# Runtime POSIX — candidat R02/R03/R04/R05
+# Process supervision
 
-Les parcours agents, commandes, vérification, services, extensions, review, file et automatisation utilisent désormais leurs cas d’usage communs sous Linux/macOS. Les mêmes réservations SQLite, protections de mutation, limites de flux, masquage, délais, confirmations et récupérations sans rejeu restent appliqués. Les routes fichiers/worktrees ne refusent plus Unix après le portage de leurs adaptateurs.
+Agents, commands, services, connectors, reviews and workflows share application reservations, mutation guards, stream limits, redaction, timeouts and recovery rules. Process adapters implement the operating system details.
 
-## Processus et limites
+## Windows
 
-Chaque commande possède un groupe POSIX distinct. Linux utilise `waitid(WNOWAIT)` pour observer le leader sans le récolter. Darwin utilise `proc_pidinfo(PROC_PIDT_SHORTBSDINFO)` avec observation des zombies et vérifie PID, parent et groupe du leader toujours possédé ; cela remplace le `waitid(WNOHANG)` refusé dans les vrais essais macOS. Le leader reste conservé jusqu'au nettoyage pour éviter de signaler un identifiant de groupe réutilisé. L’arrêt envoie SIGKILL au groupe puis vérifie l’absence de membre non zombie avant de récolter le leader. La lecture numérique de `/bin/ps` est sans shell/environnement hérité, bornée à deux secondes, 4 Mio et 100 000 lignes ; une inspection invalide n’est pas un succès partiel. La supervision conserve sa garde d’activité si le nettoyage échoue. Le traitement interactif attend ce propriétaire, jamais le `Child` brut qui récolterait le leader trop tôt. Le correctif Darwin reste à requalifier.
+Owned processes use Windows Job Objects for descendant management. Operations that require an approved executable pin and recheck its identity before execution. Cancellation waits for owned process cleanup before releasing activity guards.
 
-**Ce mécanisme ne contient pas un descendant qui appelle `setsid` ou change de groupe.** Une commande démarrant un démon peut donc échapper à l’arrêt d’Atelier. L’avertissement est visible dans les panneaux Agents, Services et Connecteurs. Il faut utiliser les programmes au premier plan et vérifier les démons avant restauration/mise à jour. Ce n’est pas une sandbox ; aucun filtre seccomp, service privilégié ou processus étranger n’est ajouté/arrêté pour masquer cette limite. Un crash OS ou l’arrêt brutal d’Atelier peut laisser des processus ; la récupération n’adopte ni ne tue aveuglément un PID persistant.
+## Linux and macOS
 
-Le scénario compilé `posix-runtime` crée volontairement un descendant qui change de session : il doit rester observable après l’arrêt du groupe et se fermer par le pipe synthétique possédé par le test. Il démontre la limite, sans laisser volontairement de démon ni utiliser un compte/agent réel. Le succès éventuel de ce scénario ne qualifierait donc pas un confinement des descendants détachés.
+Each command has a distinct POSIX process group. The leader remains owned until cleanup to avoid signalling a reused group identifier. Linux observes it through `waitid(WNOWAIT)`. macOS observes leader identity and zombie state through `proc_pidinfo`.
 
-## Dossiers, exécutables et ports
+Stopping sends SIGKILL to the owned group and checks for remaining members before reaping the leader. Numeric `/bin/ps` inspection has no shell or inherited environment and is limited to two seconds, 4 MiB and 100,000 lines. Failed inspection or cleanup keeps the activity guard rather than reporting success.
 
-Le répertoire des runs/services est fixé par `fchdir` sur un descripteur conservé, après validation et avant réservation/spawn. Un déplacement de chemin ne redirige pas silencieusement les écritures. Les commandes de services/vérification utilisent explicitement `/bin/sh -c` avec l’environnement sélectionné existant ; les agents et extensions gardent un lancement direct, sans shell implicite.
+A descendant can escape by calling `setsid` or changing its process group. Use foreground programs and inspect detached daemons before restoring or updating. This supervision is not a sandbox. An application crash or forced shutdown can leave processes. Recovery does not adopt or kill a persisted PID blindly.
 
-La découverte des agents accepte seulement un exécutable ordinaire avec permission d’exécution : chemin explicite, emplacements connus du HOME/Homebrew, puis entrées absolues du PATH (256 maximum). Aucun dossier courant n’est recherché. Version, connexion et quotas réutilisent les contrôles bornés et le filtrage existants. Les mises à jour natives des CLI restent Windows ; Unix indique le gestionnaire habituel, sans annoncer une commande qui n’est pas raccordée.
+## Working directories and executables
 
-POSIX n’offre pas le partage de fichier Windows qui interdit la modification d’une image ouverte. Chaque appel d’extension copie donc les octets dans un dossier privé, vérifie le SHA256 approuvé, fixe les permissions à 0500 et exécute cette copie. Une modification de source avant la copie refuse l’appel ; la source humaine n’est jamais remplacée. Les identifiants restent sur stdin. Les bibliothèques adjacentes au programme ne sont pas copiées : le module doit être autonome ou utiliser les bibliothèques système. Un acteur ayant les mêmes droits locaux n’est pas isolé du compte utilisateur.
+POSIX run and service directories are fixed with `fchdir` on retained descriptors. Renaming a path cannot silently redirect writes. Service and verification commands explicitly use `/bin/sh -c`. Agents and connectors launch directly.
 
-Les ports Linux sont lus dans `/proc` à partir des descripteurs de sockets des PID sélectionnés : 65 536 descripteurs, 1 Mio par table et 16 Mio cumulés. macOS utilise `/usr/sbin/lsof` avec PID exacts, champs numériques IPv4/IPv6, sans résolution DNS, une limite de deux secondes et 1 Mio. Les membres du groupe sont relus avant/après ; seuls les listeners d’un membre encore présent sont exposés. Ce relevé ponctuel ne prouve ni réponse HTTP ni disponibilité continue.
+POSIX connector invocations copy approved executable bytes into a private directory, verify SHA256, set mode `0500` and execute the copy. Source changes before copying refuse the call. Adjacent libraries are not copied, so modules must be standalone or use system libraries. Secrets use stdin. A process with the same local user rights is not isolated from that account.
 
-La relance d’un service avec port automatique réserve un nouveau port auprès du système ; l’ancien peut encore être en `TIME_WAIT` ou appartenir à un autre listener. Un port configuré reste demandé exactement et son indisponibilité est un refus. Ce contrat est commun aux trois systèmes ; le service voisin reste indépendant et les adresses affichées sont relues après relance. Le correctif et sa régression attendent leur requalification.
+## Service ports
 
-## État de preuve
+Linux reads selected process sockets through `/proc`, bounded to 65,536 descriptors, 1 MiB per table and 16 MiB in total. macOS uses `/usr/sbin/lsof` with exact PIDs and numeric IPv4 and IPv6 fields, no DNS lookup, a two second timeout and 1 MiB output limit.
 
-Scénarios écrits : nettoyage de descendants ordinaires, annulation et activité persistante, limite `setsid`, diagnostics compilés, protocoles interactifs Codex/Claude, vérification de sources, comptes synthétiques, copies d’extensions et mutation humaine, parseurs de ports et vrais listeners synthétiques. Les scénarios services utilisent le shell de la plateforme ; leur point d’entrée enfant est explicitement ignoré hors lancement par le scénario.
+Group membership is checked before and after inspection. A displayed listener is a point in time observation and does not prove continuous availability or an HTTP response.
 
-**Aucun build, test, Clippy, scénario navigateur ou workflow exécuté pendant ce portage.** Toutes ces fonctions restent candidates. Les parcours bureaux/navigateurs, performances, nettoyage réel et limites de chaque architecture doivent être lus dans les résultats de la campagne finale avant toute qualification.
+Restarting a service with an automatic port reserves a new port. A configured port is requested exactly and fails if unavailable. Other services remain independent.
 
-Références : [`waitid` Linux](https://man7.org/linux/man-pages/man2/waitid.2.html), [champs `lsof`](https://github.com/lsof-org/lsof/blob/master/docs/manpage.md), et [en-tête Apple XNU](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/sys/event.h), qui indique que NOTE_TRACK/NOTE_CHILD ne sont plus supportés depuis macOS 10.5. Aucun suivi kqueue inexistant n’est présenté comme une protection.
+## Tests
+
+Synthetic process fixtures cover ordinary descendants, cancellation, retained activity on cleanup failure, interactive protocols, connector copies and listener inspection. The `posix-runtime` fixture deliberately creates a detached descendant and closes it through a pipe owned by the test. It verifies the documented limit rather than claiming containment of detached processes.
+
+See [verification](rust-final-qualification.md) for platform execution requirements.

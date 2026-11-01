@@ -1,43 +1,35 @@
-# Champs de formulaire
+# Atelier UI
 
-Le bloc final de `style.css` définit l’apparence commune des champs : couleurs,
-typographie, hauteur, bordures, focus, lecture seule, désactivation et erreur
-(`aria-invalid="true"`). Les classes existantes `form-control` et `form-select`
-utilisent ce même contrat ; il s’applique aussi automatiquement aux éléments
-HTML natifs. Les écrans gardent la responsabilité des largeurs et espacements.
+The browser interface for Atelier Kanban uses Leptos CSR and compiles to WebAssembly. The native application serves its assets over authenticated loopback HTTP.
 
-Les anciennes règles sont regroupées dans la couche CSS `legacy` pour que les
-styles communs priment sans ajouter de sélecteurs par écran ni de `!important`.
-Modifier les variables `--field-*` pour faire évoluer tous les champs ensemble.
-Les cases à cocher, boutons radio et champs spécialisés gardent leur rendu dédié.
+## Build
 
-Les selects simples utilisent `appearance: base-select` et `::picker(select)`
-pour harmoniser aussi le menu ouvert, ses options et la sélection. Le clavier,
-la recherche par saisie et la fermeture restent gérés par le navigateur. Sans
-prise en charge de cette API, le menu reste natif ; les listes multiples et
-les selects avec plusieurs lignes restent également natifs.
+Run from the repository root with the committed Rust toolchain, Trunk 0.22.1 and wasm-bindgen CLI 0.2.130:
 
-Aucune dépendance supplémentaire ni génération Sass/Node : Trunk embarque
-directement `style.css`. Le parcours WebDriver existant vérifie le style commun
-entre recherche et sélection de projet, ainsi que l’activation du picker si
-le navigateur le prend en charge. Ce contrôle ne remplace pas une qualification
-visuelle et clavier sur chaque navigateur cible.
+```sh
+cargo fetch --locked
+cargo xtask build-ui
+```
 
-## Palette
+Release assets are written to `.artifacts/rust-ui`. For the Windows development preview, `cargo xtask build-ui --dev` writes `.artifacts/rust-ui-dev`.
 
-Les variables du bloc final de `style.css` définissent le fond noir, les surfaces
-neutres et les états : vert pour activité/réussite, ambre pour vérification,
-rouge pour erreur/destruction. Les actions principales sont claires avec texte
-sombre ; les onglets et compteurs restent neutres. Les dégradés décoratifs ont
-été remplacés par des surfaces unies. Le logo existant reste inchangé.
+Trunk bundles `style.css` directly. The build externalizes the module loader for the content security policy and enforces asset size limits. No Node.js or Sass build is required.
 
-Direction Taste : `true-black-flat`, seed `987013130`. La navigation et la
-composition existantes sont conservées pour cette revue de couleurs.
-## Premier démarrage
+## Components and styling
 
-L’accueil propose une création de tâche et l’ajout facultatif d’un projet, sans
-étapes numérotées ni connecteur obligatoire. Il disparaît dès qu’une tâche existe
-(y compris archivée), indépendamment de la recherche et du projet sélectionné ;
-les brainstorms seuls ne comptent pas comme une première tâche. Le bouton de
-création de l’en-tête revient ensuite. Fermer le formulaire rend le focus au
-bouton de création visible.
+Use shared fields, buttons, cards and dialogs described in [UI components](../../docs/ui-components.md). The final CSS blocks define common field tokens and the neutral dark palette. Activity and success use green, verification uses amber, and errors and destructive actions use red.
+
+Simple selects use the browser's customizable picker where available and retain native behavior otherwise. Keyboard operation, accessible labels and disabled states must work in both cases.
+
+## First use
+
+The welcome screen offers local task creation and optional project setup. It disappears when any task exists, including an archived task. Brainstorm discussions alone do not count as a first task. Closing creation restores focus to the visible creation control.
+
+## Verification
+
+```sh
+cargo clippy -p atelier-ui --target wasm32-unknown-unknown --all-targets --locked -- -D warnings
+cargo check -p atelier-ui --target wasm32-unknown-unknown --locked
+```
+
+Use real synthetic browser journeys for interaction changes. See [verification](../../docs/rust-final-qualification.md) and [contributing](../../CONTRIBUTING.md).

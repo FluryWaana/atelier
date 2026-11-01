@@ -1,20 +1,48 @@
-# Architecture Rust
+# Architecture
 
-Le dépôt est un workspace Cargo à la racine, avec exactement quatre membres :
+Atelier Kanban is a Cargo workspace with four members. The native application serves a browser interface over loopback HTTP and stores workspace data in SQLite.
 
-- `crates/atelier-core` : modèles, validation, règles métier et contrats publics, sans accès aux fichiers, au réseau ou aux processus.
-- `crates/atelier-app` : binaire natif `atelier`, composition des cas d’usage, HTTP loopback, SQLite, coffre système, fichiers, Git, agents et intégrations.
-- `crates/atelier-ui` : interface Leptos CSR compilée en WebAssembly, servie avec ses assets par le binaire natif.
-- `xtask` : fabrication de l’interface, inventaire, qualification synthétique, signatures de préproduction et paquets.
+| Crate | Responsibility |
+| --- | --- |
+| `atelier-core` | Domain models, validation, application use cases and public contracts |
+| `atelier-app` | Composition, HTTP, SQLite, filesystem, credentials, Git, processes and integrations |
+| `atelier-ui` | Leptos CSR interface compiled to WebAssembly |
+| `xtask` | UI builds, source inventory, verification and packaging |
 
-Les dépendances et la toolchain sont fixées par [Cargo.lock](../Cargo.lock) et [rust-toolchain.toml](../rust-toolchain.toml). Le produit n’embarque aucun runtime Node. Les fixtures JSON de régression sont conservées dans les dossiers `tests/fixtures/` de leurs crates. Leurs attentes suivent les contrats actuels. Les dossiers de services sont validés à l’enregistrement et au lancement avec les mêmes règles, notamment le refus des flux de fichiers Windows et des noms réservés.
+## Boundaries
 
-Le serveur écoute sur loopback et vérifie session locale, Host et Origin. Les identifiants restent dans le stockage protégé natif ; ils ne sont pas exposés au navigateur. Les accès aux dépôts demandent une autorisation explicite et restent bornés. Les processus d’agents et de connecteurs sont supervisés, avec entrées privées, sorties bornées et arrêt des descendants.
+Domain and application contracts in `atelier-core` remain independent of filesystem, network and platform APIs. Native adapters belong to `atelier-app`. The UI consumes public contracts and keeps translated presentation logic in `atelier-ui`.
 
-Le clonage de projet utilise Git installé, sans nouvelle dépendance. Son contrat typé et la validation du nom de dossier appartiennent au core. Le transport et la réservation de destination appartiennent à app. HTTPS accepte un dépôt public ou une connexion de forge choisie, limitée à son origine exacte. SSH accepte les URL `ssh://` et `utilisateur@hôte:chemin`, avec les clés de l’agent SSH et le fichier `~/.ssh/known_hosts`. Il ne charge ni clé privée, ni configuration SSH personnelle et refuse les hôtes inconnus. Les alias SSH et les gestionnaires personnels d’identifiants Git ne sont pas utilisés.
+The build uses [rust-toolchain.toml](../rust-toolchain.toml) and [Cargo.lock](../Cargo.lock). Trunk bundles the UI and CSS directly. No Node.js or Sass pipeline is required. Regression fixtures belong in each owning crate's `tests/fixtures/` directory.
 
-Une mutation exclusive réserve le clonage avant le réseau. Le dossier parent est ouvert sans suivre de lien. Un dossier temporaire unique reçoit les objets, puis les fichiers de la branche par défaut. Le téléchargement et le contenu déplié sont chacun limités à 512 Mio, avec au plus 10 000 fichiers et des processus bornés. Aucun hook, filtre personnel ou sous-module distant n’est exécuté. La publication refuse atomiquement toute destination existante. L’autorisation locale vérifie l’identité du dossier publié. L’annulation arrête les descendants avant de retirer le dossier temporaire vérifié. Un arrêt brutal peut laisser ce dossier temporaire, qui n’est jamais repris ou effacé automatiquement. Le dépôt terminé est conservé si son autorisation ou la création du projet échoue. L’interface permet alors de l’ajouter comme dossier existant sans recloner.
+## Local security
 
-SQLite possède une identité et une version Rust explicites ; une base inconnue est refusée sans effacement. Les mutations revalident leurs instantanés, les transactions restent courtes et les opérations externes sont réservées avant l’I/O. Journaux persistants, confirmations et rapprochements traitent les effets distants incertains sans répétition aveugle. Les restaurations et mises à jour doivent conserver les modifications humaines ; les opérations incompatibles restent bloquées pendant les runs, services et autres opérations réservées.
+The HTTP server binds to loopback and validates the local session, Host and Origin. The initial browser session fragment is removed after use. Credentials remain in native protected storage and are not returned to the frontend. The content security policy uses an external module loader.
 
-L’application est en préproduction. Une implémentation ou un scénario écrit ne vaut pas qualification : consulter la [checklist fonctionnelle](features.md) et les [résultats réels de la campagne](rust-final-qualification.md). Les contrats des [connecteurs](rust-connectors.md), du [lanceur](rust-launcher.md), des [agents et mises à jour CLI](rust-agent-cli.md) et des [paquets](rust-packages.md) détaillent leurs protections et limites.
+Repository access requires explicit authorization and bounded reads. Paths and service directories reject unsupported names and traversal. Agents and connectors receive selected inputs. Output, execution time and persisted logs have explicit limits.
+
+See [process supervision](rust-posix-runtime.md) for platform guarantees. Agents and connectors execute with the user's rights. Supervision does not provide a security sandbox.
+
+## Storage and concurrency
+
+SQLite has an explicit application identity and schema version. Unsupported databases are refused without erasure. Transactions remain short. Operations reserve resources before external I/O and revalidate revisions before committing results.
+
+Remote effects use persistent intentions and confirmation. An interrupted write becomes uncertain and requires reconciliation. Recovery does not blindly repeat a remote write. Backups, restoration and updates preserve human changes and block incompatible activity.
+
+## Project cloning
+
+The core validates requests and destination names. The app reserves the operation and uses installed Git. HTTPS supports public repositories or a selected forge connection restricted to its exact origin. SSH uses the local SSH agent and known hosts. Unknown hosts are refused. Personal Git credential helpers, SSH aliases, private key files and SSH configuration are not loaded.
+
+The parent directory is opened without following links. A unique temporary directory receives the repository and default branch checkout. Downloaded objects and checked out content are each limited to 512 MiB, with at most 10,000 files. Hooks, personal filters and remote submodules are not executed.
+
+Publication atomically refuses an existing destination. Cancellation stops owned descendants before removing the verified temporary directory. A crash can leave a temporary directory that is not automatically adopted or deleted. A completed repository remains on disk if authorization or project creation fails and can be added as an existing directory.
+
+## References
+
+* [Launch and data](rust-launcher.md)
+* [Agents](rust-agent-cli.md)
+* [Integrations](rust-integrations.md)
+* [Connectors](rust-connectors.md)
+* [Workflows](rust-workflows.md)
+* [Packages](rust-packages.md)
+* [Verification](rust-final-qualification.md)

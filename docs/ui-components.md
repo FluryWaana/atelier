@@ -1,15 +1,16 @@
-# Composants de l'interface
+# UI components
 
-Les composants Leptos de `crates/atelier-ui/src/form.rs`, `button.rs`, `card.rs` et `modal.rs` portent les interactions communes. Aucun kit JavaScript ou pipeline Sass supplémentaire n'est nécessaire.
+Common Leptos components live in `crates/atelier-ui/src/form.rs`, `button.rs`, `card.rs` and `modal.rs`. Reuse them for consistent keyboard behavior, accessible names and state handling. The UI has no additional JavaScript component kit or Sass build.
 
-## Champs
+## Fields
 
-- `Input` conserve les types HTML natifs, dont texte, nombre, date, heure, email et URL. `Textarea`, `Select`, `Checkbox` et `Switch` couvrent les autres contrôles courants.
-- Les attributs natifs se placent après `{..}`. Les propriétés du composant se placent avant. Les booléens natifs doivent avoir une valeur explicite, par exemple `required=true`.
-- `Field` associe le libellé, l'aide et les erreurs au contrôle avec `aria-describedby` et `aria-invalid`. Un `id` explicite doit être unique. Sans identifiant fourni, le composant en génère un pour chaque instance, y compris dans une liste. Une erreur de validation apparaît à la sortie du champ et se corrige pendant la saisie. La propriété `error` accepte une erreur métier ou serveur traduite.
-- `Form` vérifie les contraintes HTML avant de soumettre et place le focus sur le premier contrôle invalide. `on_invalid` permet d'ouvrir son onglet. Les sections repliées contenant le champ invalide sont ouvertes avant le focus. `on_submit` reçoit le SubmitEvent une fois le formulaire valide. `busy` empêche les soumissions répétées. La validation serveur reste obligatoire.
-- `Input copy=true` ajoute un bouton copier et un retour accessible de réussite ou d'échec. `Input input_type="password" reveal=true` permet d'afficher la valeur saisie. Aucun secret enregistré n'est chargé pour cette action. Avec une désactivation individuelle, fournir aussi `disabled=Signal::derive(...)` avant `{..}` pour désactiver les actions.
-- `Combobox` filtre des `Choice { value, label }`. La saisie seule ne change jamais la valeur enregistrée. Une sélection par clic ou Entrée valide la valeur. Flèches, Début, Fin, Échap et Tabulation sont pris en charge.
+`Input` retains native HTML types such as text, number, date, time, email and URL. `Textarea`, `Select`, `Checkbox` and `Switch` cover other common controls.
+
+Place component properties before `{..}` and native attributes after it. Native booleans need explicit values such as `required=true`.
+
+`Field` associates labels, help and errors through `aria-describedby` and `aria-invalid`. Explicit IDs must be unique. Without one, the component generates an ID per instance. Validation errors appear on blur and update during input. The `error` property accepts translated business or server errors.
+
+`Form` checks HTML constraints and focuses the first invalid control. `on_invalid` can open its tab. Collapsed sections containing invalid fields open before focus. `on_submit` receives the event after validation. `busy` blocks repeated submission. Server validation remains required.
 
 ```rust
 view! {
@@ -20,15 +21,17 @@ view! {
 }
 ```
 
-## Boutons
+`Input copy=true` supplies a copy action with accessible success or failure feedback. `Input input_type="password" reveal=true` reveals only the entered value and never loads a stored secret. For individual disabling, also pass `disabled=Signal::derive(...)` before `{..}` so field actions are disabled.
 
-`button::Button` est le composant commun pour tous les boutons des vues et des modales, y compris les actions des champs. Il rend un bouton HTML natif. Son type par défaut est `button` pour éviter une soumission accidentelle. Fournir `type="submit"` après `{..}` pour soumettre un formulaire. Les événements, identifiants, titres, rôles, attributs ARIA et attributs de formulaire restent natifs.
+`Combobox` filters `Choice { value, label }`. Typing does not change the saved value. Clicking or pressing Enter selects a choice. Arrow keys, Home, End, Escape and Tab retain keyboard support.
 
-`ButtonVariant` propose `Primary`, `Secondary` par défaut, `Ghost` et `Danger`. Réserver `Primary` à l'action principale et `Danger` aux actions destructives. Les boutons d'icône doivent garder un nom accessible avec `aria-label`. Les styles de disposition des onglets, listes et menus restent dans leur vue.
+## Buttons
 
-`class`, `disabled` et `busy` se placent avant `{..}`. La classe fournie est ajoutée à `ui-button`. `disabled` et `busy` reçoivent des signaux booléens. `busy` désactive le bouton, renseigne `aria-busy` et affiche un indicateur qui respecte la préférence de réduction des animations. Conserver un libellé pendant l'attente. Le signal `busy` du formulaire affiche aussi l'indicateur sur son bouton de soumission. Un champ désactivé par son `fieldset` conserve le comportement natif.
+`button::Button` renders a native HTML button. Its default type is `button`. Set `type="submit"` after `{..}` for form submission. Native events, IDs, titles, roles, ARIA and form attributes remain available.
 
-Les styles de base précèdent les règles de contexte dans la couche CSS existante. Ils ne centrent pas les contenus avec Flexbox. La navigation garde ses icônes et libellés alignés à gauche. Les titres des cartes gardent leur disposition de texte cliquable. La barre de filtres aligne les contrôles en bas sur bureau et les répartit sur plusieurs lignes sur mobile. Ces alignements et l'absence de débordement ont été contrôlés à 1440, 768 et 390 pixels après correction.
+`ButtonVariant` provides `Primary`, `Secondary`, `Ghost` and `Danger`. The default is `Secondary`. Reserve `Primary` for the main action and `Danger` for destructive actions. Icon buttons require an accessible name.
+
+Place `class`, `disabled` and `busy` before `{..}`. The supplied class is added to `ui-button`. Boolean signals control `disabled` and `busy`. Busy state disables the button, sets `aria-busy` and shows an indicator that respects reduced motion. Retain a label while waiting. A busy form also marks its submit button. Native fieldset disabling remains effective.
 
 ```rust
 view! {
@@ -44,36 +47,26 @@ view! {
 }
 ```
 
-## Cartes
+## Cards
 
-`card::Card` rend un article HTML avec la surface commune. `class` se place avant `{..}`. Les identifiants, attributs ARIA, états et événements restent sur l'article. La disposition des listes, des processus, des services et du suivi du temps reste définie par leur vue.
+`card::Card` renders an article with the common surface. Place `class` before `{..}`. Native IDs, ARIA, states and events stay on the article. Each view owns layout.
 
-`CardHeader` aligne le libellé et les actions. `CardFooter` regroupe les métadonnées et les états secondaires. Le Kanban utilise ces trois composants. Son titre ouvre la tâche et nomme l'article avec `aria-labelledby`. Le menu garde un bouton de 44 pixels, disponible au clavier et sur écran tactile. Les cartes ne deviennent pas des boutons contenant d'autres boutons. Le déplacement, l'archivage et les confirmations gardent leurs gestionnaires existants.
+`CardHeader` groups the label and actions. `CardFooter` groups metadata and secondary states. Kanban titles open the task and name the article through `aria-labelledby`. Keep the card menu's 44 pixel action target usable by keyboard and touch. Do not nest buttons inside a card that is itself a button.
 
-Le menu natif `popover` utilise les ancres CSS pour rester près de son bouton, avec retournement si le bord de la fenêtre est proche. Les métadonnées de projet sont du texte et ne présentent pas de flèche de liste déroulante. Aucun paquet supplémentaire n'est requis.
+The native `popover` menu uses CSS anchors near its trigger and flips near the viewport edge. Project and backup choices remain buttons with `ui-card-choice`. Conversation messages retain their own presentation.
 
-Les choix de projet et de sauvegarde restent des boutons avec la classe `ui-card-choice`. Les messages de conversation gardent leur présentation de conversation. Les autres articles d'information et d'objet utilisent `Card`. Les styles sont limités à ces classes et ne changent pas la navigation ou les champs.
+## Dialogs
 
-Vérification du 30 octobre : 16 usages de surface migrés et 105 états contrôlés sur trois largeurs. Le parcours ciblé couvre les titres longs, les descriptions vides, les noms accessibles, les cibles d'action de 44 pixels, les menus près du bouton et leur retournement en bas d'écran. L'ouverture utilise des événements clavier natifs du navigateur. Le changement de colonne vérifie les gestionnaires avec des événements DragEvent synthétiques et le statut enregistré. Il ne qualifie pas un geste physique de glisser-déposer sur chaque plateforme. Les 24 contrôles d'onglet sélectionné passent aussi.
+`Modal` provides the native dialog, accessible title, opening and Escape handling. The parent decides whether closing requires draft confirmation. `busy` blocks Escape during an operation. `ModalHeader`, `ModalBody` and `ModalActions` provide common spacing. The close button and Escape must use the same close request.
 
-Design Taste sur le Kanban : 0 échec et 3 avertissements. Les libellés de page et de pied de page existaient déjà. Les différences de hauteur et les zones vides correspondent aux listes Kanban de tailles différentes et à leurs zones de dépôt. Les cartes restent de hauteur adaptée à leur contenu. Les captures des trois largeurs et les planches du catalogue ont été relues. Les parcours métier complets restent à qualifier séparément.
+A dialog mounted only while open uses automatic opening. A persistent dialog opened through its `NodeRef` uses `auto_open=false`. Do not call `show_modal` a second time on mount.
 
-## Comportement des modales
+`Confirmation` provides a persistent confirmation dialog. The parent supplies `open`, `busy` and the actual cancellation handler through `on_close`. Mark cancellation with `data-confirmation-cancel` to return focus before its handler. Use `ModalActions` for choices. Keep recovery messages near their action with `Notice`.
 
-`Modal` porte le dialogue natif, le titre accessible, l'ouverture et Échap. Le parent garde la décision de fermer ou de confirmer la perte du brouillon. `busy` empêche Échap pendant une opération. `ModalHeader`, `ModalBody` et `ModalActions` donnent les espacements et les actions communs. Le bouton de fermeture doit utiliser la même demande de fermeture que la touche Échap.
+## Styling and checks
 
-Une modale montée seulement quand elle est ouverte utilise le comportement par défaut. Un dialogue persistant ouvert explicitement avec son `NodeRef` utilise `auto_open=false`. Ne pas ajouter un second appel `show_modal` au montage.
+The final blocks of `style.css` define common controls and palette. Field tokens use `--field-*`. Common rules apply to `form-control`, `form-select` and native fields. Each screen owns widths and spacing.
 
-`Confirmation` fournit une modale persistante, un titre accessible, la fermeture par Échap et le bouton de fermeture. Le parent fournit le signal `open`, l'état `busy` et sa vraie annulation via `on_close`. Le bouton d'annulation porte `data-confirmation-cancel` pour rendre le focus au formulaire avant son gestionnaire. Les actions d'annulation et de confirmation utilisent `ModalActions`. Les informations de récupération ou de vérification qui doivent rester près de leur action utilisent `Notice`.
+Simple selects use `appearance: base-select` and `::picker(select)` when supported. Other browsers retain their native picker. Multiple selects and visible list selects retain native rendering.
 
-## Couverture du 30 octobre 2026
-
-Les 331 boutons utilisent `button::Button`. La reprise du catalogue sur 105 états et trois largeurs contrôle aussi l'usage du composant commun et le nom accessible de chaque bouton visible. Le scénario ciblé d'enregistrement vérifie le type de soumission, le bouton secondaire sans soumission, le brouillon propre, le blocage pendant la requête, `aria-busy`, l'indicateur d'attente et la réduction des animations. Les 20 contrôles des actions de champ passent aussi sur chacune des trois largeurs. La compilation WASM avec toutes les cibles, la compilation de `xtask`, le formatage et la génération UI passent. Les parcours métier complets ci-dessous restent distincts de cette vérification ciblée.
-
-L'inspection Design Taste des projets donne 0 échec et 2 avertissements. Ils concernent le petit libellé du pied de page et la longueur du catalogue synthétique, sans lien avec les boutons. Les captures des trois largeurs et les planches des 105 états ont été relues.
-
-Les formulaires et dialogues des vues utilisent ces composants communs. Les contrôles HTML natifs restent dans leur implémentation. Les confirmations de suppression, d'abandon et d'opérations externes utilisent `Confirmation`. Les panneaux de récupération restent dans leur contexte avec `Notice`.
-
-Le catalogue synthétique a contrôlé 105 états à 390, 768 et 1440 pixels. Il couvre les 11 routes principales, les onglets des projets, des paramètres et des tâches, ainsi que les dialogues principaux. Aucun débordement horizontal, identifiant dupliqué, champ sans libellé, description ARIA manquante ou dialogue sans titre n'a été détecté. Les captures sont des contrôles de présentation et d'accessibilité structurelle. Elles ne valident pas toutes les opérations métier.
-
-Les parcours WebDriver complets ne sont pas validés. Le dernier passage a révélé une mauvaise cible de focus à l'ouverture d'une tâche, corrigée vers `editor-heading`. Le parcours Tempo a rencontré un refus temporaire d'admission. Le parcours de mise à jour a été refusé parce que le binaire de vérification n'avait pas le nom applicatif requis. Ces résultats ne doivent pas être comptés comme des réussites. Les tests Rust, Clippy et la CI n'ont pas été exécutés.
+Preserve English and French translations, draft protection, loading and error states, focus restoration and reduced motion. Check representative states at 1440, 768 and 390 pixels, including long labels, empty content, menu edges and invalid fields in hidden tabs. Presentation checks complement the business journeys in [verification](rust-final-qualification.md).

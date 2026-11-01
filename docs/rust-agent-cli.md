@@ -1,17 +1,29 @@
-# Mises à jour des CLI — candidat R03
+# Agent profiles and CLI updates
 
-Le diagnostic explicite d’un profil Windows lit sa version et les métadonnées publiques du paquet correspondant au registre npm HTTPS. Aucun runtime Node, compte npm, proxy implicite, redirection ou secret n’est utilisé pour cette lecture. Seules les versions stables à trois composantes sont acceptées. Un programme personnalisé ou une installation hors des dossiers natifs du fournisseur renvoie vers son gestionnaire habituel.
+Profiles select Codex, Claude Code or a custom command. Configure the executable and supported model or effort settings in the agent screen. Projects and tasks can select a profile.
 
-La confirmation porte sur le profil enregistré, le dossier natif, la version installée, la version publiée, la date du diagnostic et le SHA256 du programme. L’aperçu expire après dix minutes. Ces éléments sont relus avant l’envoi ; un changement refuse la commande. Les autres sessions de ce CLI doivent être fermées par l’utilisateur.
+Installation and connection checks belong to the profile. A failed task run can open the relevant profile for investigation. A configured connection and verified service access are distinct states. Version, usage and quota information depend on provider support.
 
-La commande native est uniquement `update`, sans prompt ni jeton dans son environnement filtré. Le programme reste épinglé jusqu’à sa création suspendue dans le Job Object ; son identité est vérifiée avant reprise. Un verrou de fichier à lien unique protège le dossier contre les mises à jour concurrentes d’autres instances Atelier. La capture est bornée à 180 secondes et 1 Mio par flux ; aucune sortie brute n’est affichée.
+## Discovery
 
-Le journal SQLite distingue préparation, commande en cours, version observée, refus avant lancement et résultat incertain. Après interruption, aucune commande n’est rejouée : un nouveau diagnostic peut constater la version actuelle sans prouver la réussite de la commande passée. Une version relue inférieure à la cible reste explicitement signalée. Le fournisseur peut installer une version stable plus récente que l’aperçu ; aucun rollback de CLI n’est promis.
+Discovery uses explicit paths and known installation locations. On POSIX, candidates must be ordinary executable files. PATH entries must be absolute, with at most 256 entries inspected. The current directory is not searched implicitly.
 
-Runs, services, opérations distantes, file active, minuteurs, exports, sauvegardes/restaurations et mises à jour d’Atelier sont protégés contre le chevauchement. Les changements de profil ou de diagnostic retirent la confirmation dans l’interface bilingue.
+Checks have bounded execution and filtered output. They must not expose credentials. Custom programs and unsupported installation layouts use their normal installation manager.
 
-État : implémentation candidate Windows et scénarios purs/SQLite/HTTP locaux/fichier épinglé écrits. `xtask/tests/agent-cli.rs` ajoute la préparation réelle contre un registre loopback et un faux CLI compilé dans un HOME synthétique : commande `update` unique, environnement filtré, version relue, verrou d’une autre instance, empreinte/version/date périmées, mauvais programme refusé avant reprise du thread et interruption des descendants. Aucun exécutable/compte réel n’est découvert par ces scénarios ; aucune configuration de test n’est ajoutée au produit.
+## Native CLI updates
 
-**Aucun build, test, scénario navigateur ou workflow exécuté.** Ces scénarios écrits ne constituent pas des preuves. Le parcours HTTP/navigateur complet et les mises à jour réelles des versions fournisseur restent à qualifier dans la campagne finale. POSIX n’est pas pris en charge par cet incrément.
+Native CLI updating is available for supported provider installations on Windows. Linux and macOS use the program's normal package manager. Atelier does not provide initial installation of agent CLIs.
 
-Référence : commande officielle Codex [`update`](https://learn.chatgpt.com/docs/cli/reference), et commandes natives de la référence fonctionnelle `lib/agent-updates.mjs`. Aucune installation initiale de CLI ni capacité Azure supplémentaire n’est ajoutée.
+An explicit check reads the installed version and public package metadata over HTTPS. Only stable versions with three numeric components are accepted. This metadata lookup does not require a Node.js runtime or npm account.
+
+The update preview binds the saved profile, native directory, installed and published versions, check time and executable SHA256. It expires after ten minutes. Confirmation revalidates these values. Close other sessions of the CLI before updating.
+
+The native command is `update`, with a filtered environment and no prompt or token. Windows pins the executable until suspended creation inside its Job Object and verifies its identity before resuming. A file lock prevents concurrent Atelier updates of that installation. Execution is bounded to 180 seconds and 1 MiB per output stream. Raw output is not displayed.
+
+## Recovery and limits
+
+The persistent journal distinguishes preparation, running, observed version, refusal before launch and uncertainty. Interruption never causes automatic replay. A fresh check can observe the current version without proving how a prior command completed.
+
+A version below the target remains an explicit failure. Providers can install a newer stable version than the preview. CLI rollback is not promised.
+
+Runs, services, active queues, timers, remote effects, exports, backups and application updates block incompatible CLI operations. Changing a profile or check invalidates its confirmation. See [process supervision](rust-posix-runtime.md) for execution guarantees and [verification](rust-final-qualification.md) for synthetic checks.

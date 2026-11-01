@@ -1,32 +1,53 @@
-# Lanceur Rust — candidat non qualifié
+# Launch and data directories
 
-Le binaire `atelier` propose `launch` (commande par défaut), `stop`, `serve`, `--help` et `--version`. L’ancienne entrée `serve-prototype` et l’interface Node ont été retirées. Le service natif accepte uniquement les noms d’assets Leptos/WASM autorisés, capturés par le serveur après ouverture vérifiée. Aucun moteur Node n’est lancé.
-
-Pendant la reconstruction, utiliser exclusivement des dossiers synthétiques lors de la campagne finale, par exemple :
+The `atelier` binary provides `launch`, `stop`, `serve`, `--help` and `--version`. With no command, it uses `launch`.
 
 ```text
-atelier launch --data-dir EMPTY_SYNTHETIC_DIRECTORY --assets SYNTHETIC_RUST_UI --port 4317 --no-browser
-atelier stop --data-dir EMPTY_SYNTHETIC_DIRECTORY --port 4317
-atelier serve --data-dir EMPTY_SYNTHETIC_DIRECTORY --assets SYNTHETIC_RUST_UI --port 4317
+atelier --help
+atelier --version
+atelier launch --data-dir SYNTHETIC_DATA --assets BUILT_UI --port 4317 --no-browser
+atelier stop --data-dir SYNTHETIC_DATA --port 4317
+atelier serve --data-dir SYNTHETIC_DATA --assets BUILT_UI --port 4317
 ```
 
-Ces commandes sont documentées, **pas exécutées sur le PC du propriétaire**. `serve` garde le serveur au premier plan pour un diagnostic de démarrage ; `launch` démarre en arrière-plan, sans fichier de log illimité. L’absence d’assets et les options inconnues/répétées sont refusées. Les chemins des données doivent être représentables en Unicode, sans conversion silencieuse.
+Replace the example paths with explicit directories. `launch` starts a background server or reuses a verified instance. `serve` keeps the server in the foreground. Use the same data directory and port to stop an instance. Unknown or repeated options and missing UI assets are refused.
 
-Le lanceur interroge le port numérique loopback avec le client HTTP existant, sans proxy/redirection, et vérifie sa preuve HMAC avant toute commande authentifiée. La réponse authentifiée doit annoncer application, protocole `atelier-local/1` et même dossier canonique. Un autre port/service/dossier n’est jamais arrêté ni adopté. Le démarrage attend au plus 20 secondes et arrête uniquement son enfant créé si celui-ci n’est pas prêt ; l’arrêt local utilise `/api/shutdown`, exempté de la garde de mutations comme les autres annulations, puis attend la disparition de l’instance. Les runs/services et écritures acceptées sont fermés par le serveur existant, pas contournés par un kill du lanceur.
+## Instance identity
 
-Sur Windows le serveur n’ouvre pas de console et le navigateur est ouvert par l’API Shell. Sur POSIX, le serveur dispose d’un groupe de processus séparé ; l’ouverture utilise `/usr/bin/xdg-open` ou `/usr/bin/open` avec le fichier de redirection privé déjà prévu pour la session, sans jeton dans leurs arguments. Aucun jeton n’est affiché dans le terminal. Une erreur d’ouverture du navigateur laisse le serveur disponible et ne prétend pas qu’il a été arrêté.
+The launcher probes numeric loopback without proxies or redirects. It verifies an HMAC proof, the application identity, protocol `atelier-local/1` and canonical data directory before sending authenticated commands. A different service or workspace is never adopted or stopped.
 
-Sans override, le répertoire du binaire fournit `ui`. Le mode portable utilise son sous-dossier `data` ; les modes installés utilisent LOCALAPPDATA/Home Windows, XDG_DATA_HOME/Home Linux, ou `Library/Application Support/AtelierKanban/data` sous macOS. Ces sélections sont du code candidat ; aucun dossier personnel n’a été ouvert pendant ce développement. Le format SQLite Rust et les refus de répertoires inconnus restent actifs ; rien n’est converti ni effacé implicitement. L’identité/coffre interne du prototype reste à finaliser avec la livraison ; aucun import Node ni rétrocompatibilité ne sont exigés.
+Startup waits up to 20 seconds. A failed start stops only the child created by that attempt. Shutdown uses the authenticated `/api/shutdown` route and waits for the instance to exit, allowing the server to close its runs, services and accepted writes.
 
-Scénarios écrits : parsing sans I/O, démarrage du vrai binaire sur fixtures synthétiques sans navigateur ni identifiant, réutilisation du même PID, refus d’un autre dossier/port non vérifié sans création de données, arrêt/redémarrage et persistance d’une conversation sans agent avec rotation de session, refus des assets legacy avant initialisation. **Aucun compilé/exécuté, aucune ouverture de navigateur effectuée, aucun paquet réel produit.** Les règles de ressources, la campagne finale unique et le workflow manuel restent inchangés.
+The browser opens through native platform facilities. Session tokens are not printed or passed in browser command arguments. A browser launch error leaves the server available.
 
-Suite candidate : installation CLI signée dans un dossier neuf, versions séparées, sélection active par le lanceur et update/rollback de code avec journal et écran raccordés ; voir [les paquets et leur suivi d’exécution](rust-packages.md). Aucun parcours exécuté ni artefact qualifié. Restent les wrappers Setup/DEB/RPM, désinstallation, tray, sélection native des dossiers, diagnostics plus guidés et intégrations bureau sur les cinq cibles. Les exécutables de faisabilité restent exclus des paquets livrables.
+## Data locations
 
-Point candidat R06 — sélection de dossier : bouton dans les autorisations locales de dépôts, ouverture explicitement demandée, chemin reporté sans autorisation implicite, confirmation d’accès retirée après sélection et brouillon conservé après annulation/erreur. Helper Atelier distinct lancé avant toute ouverture des données, sans arguments injectés ni environnement de jetons ; capture/délai/arrêt du propriétaire existants. Windows utilise le dialogue Shell/COM sur son thread STA et libère le PIDL ; macOS osascript et Linux Zenity reprennent les sélecteurs de référence, sans runtime Node. Les chemins restent validés par le registre avant toute autorisation effective.
+The UI defaults to the binary's `ui` directory. Portable installations keep data in their `data` subdirectory. Installed workspaces use these locations:
 
-Scénarios de validation de sortie/cancel, refus HTTP sans session/prototype et refus des arguments du helper avant ouverture de données écrits seulement. Aucun dialogue natif, test ou build exécuté ; interactions graphiques positives, focus réel, nettoyage et dépendance Zenity restent à qualifier sur les bureaux de la campagne finale. Fonction disponible depuis l’écran d’autorisations ; pas de nouveau parcours d’installation ajouté par cet incrément.
-Point candidat — transfert portable raccordé au lanceur : atelier import-data --source SOURCE_RUST_ABSOLUE --destination DOSSIER_VIDE_ABSOLU --confirm. Arguments/confirmation validés avant accès aux dossiers, source distincte, destination vide, publication depuis une copie privée et sauvegarde de la nouvelle base. Le verrou de données de la source est conservé pendant la copie, même lorsque sa connexion métier est fermée ; la source ne doit donc être ouverte dans aucune instance. Une base de verrou peut être créée sur la source, sans modification des enregistrements métier.
+| Platform | Workspace |
+| --- | --- |
+| Windows | `%LOCALAPPDATA%/AtelierKanban/workspace` |
+| Linux | `$XDG_DATA_HOME/atelier-kanban-workspace`, with `~/.local/share` as the base fallback |
+| macOS | `~/Library/Application Support/AtelierKanban/workspace` |
 
-Identité ATKR/version et intégrité contrôlées dans la copie, WAL conservé, aucun format Node importé. Registre local des autorisations de dépôts, session/browser et verrous non transférés ; les dépôts devront être explicitement réautorisés. Les fichiers/coffres existants sont conservés, sans promesse de déchiffrement entre comptes ou machines. Limites explicites : 100 000 entrées, profondeur 32, fichier 128 Mio, total 1 Gio hors base, base et WAL chacun 1 Gio ; liens/fichiers spéciaux refusés, aucun effacement silencieux pour respecter ces bornes. Les sauvegardes intégrées restent conservées.
+A compatible workspace at the alternate application data location remains usable. An unrecognized format requires confirmation before opening a separate empty workspace. Refusal creates no workspace. Invalid markers, links and inaccessible paths remain errors. No workspace is silently moved, converted or erased.
 
-Scénarios existants étendus pour refus d’une source encore verrouillée sans connexion métier, exclusion des autorisations, profondeur excessive sans destination publiée, conservation des fichiers et arguments explicites. Écrits uniquement ; aucun transfert, scénario ni build exécuté. Le parcours graphique de transfert et sa qualification restent ouverts ; ce raccordement CLI n’est pas une qualification R06.
+The database has an explicit identity and version. Unsupported formats are refused. Keep the original directory intact when investigating a startup error.
+
+## Folder selection
+
+Native folder selection reports a path without granting repository access. Authorization still requires confirmation. Cancelling or failing to select a directory preserves the form draft. Windows uses the Shell dialog, macOS uses the system dialog through `osascript`, and Linux uses Zenity.
+
+## Portable data import
+
+```text
+atelier import-data --source ABSOLUTE_SOURCE --destination ABSOLUTE_EMPTY_DESTINATION --confirm
+```
+
+Close the source workspace first. Import holds its data lock while making a private copy, verifies database identity and integrity, and publishes into an empty distinct destination. It preserves the database WAL and included backups. A lock database can be created in the source without changing business records.
+
+Sessions, locks and local repository authorizations are excluded. Reauthorize repositories after import. Credential decryption across accounts or machines is not guaranteed.
+
+Limits are 100,000 entries, depth 32, 128 MiB per ordinary file and 1 GiB total outside the database. The database and WAL each have a 1 GiB limit. Links and special files are refused. Import does not delete content to satisfy a limit.
+
+See [packages and updates](rust-packages.md) and [verification](rust-final-qualification.md) for installation and platform checks.

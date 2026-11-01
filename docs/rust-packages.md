@@ -1,34 +1,29 @@
-# Paquets Rust de préproduction
+# Packages and updates
 
-Les composants décrits ici sont des candidats de préproduction. Les résultats réels sont suivis dans [le relevé des résultats](rust-final-qualification.md). La campagne Windows `41250211473` et le passage Safari `41247401699` ont réussi sur `2af5517`. Ces passages ne constituent pas une qualification globale des cinq plateformes. Les workflows restent manuels. Les paragraphes historiques « non exécuté » ci-dessous décrivent leur préparation initiale.
+Atelier Kanban is in preproduction. Use [GitHub Releases](https://github.com/FluryWaana/atelier/releases) for published files, release notes and platform availability. A supported build target does not imply that every release contains a qualified package for it.
 
-## Prérelease Windows et signature de distribution
+## Targets and tools
 
-### Correction du lancement et du packaging en 0.1.11
+| Target | Package formats | Native build requirements |
+| --- | --- | --- |
+| Windows x64 | Portable archive and Setup | MSVC, Windows SDK with `rc.exe`, Inno Setup 6 |
+| Linux x64 and ARM64 | Portable archive, DEB and RPM | Native compiler, `dpkg-deb`, `rpmbuild`, `desktop-file-validate` |
+| macOS x64 and ARM64 | Portable archive | Xcode command line tools |
 
-La version 0.1.10 pouvait refuser le lancement depuis le raccourci si le dossier par défaut contenait des données d'une ancienne version. Sa qualification utilisait un dossier vide, un port libre et `--no-browser`. Elle ne couvrait pas ce parcours utilisateur. Les exécutables Windows ne contenaient pas non plus les ressources d'icône et de version, et l'installateur affichait le suffixe interne « Rust ».
+All builds use the committed Rust toolchain and lockfile, Trunk 0.22.1 and wasm-bindgen CLI 0.2.130. Windows uses the static C runtime. Import checks use MSVC `dumpbin` discovered through `vswhere` to reject external Visual C++ runtime DLLs. Build tools are not runtime requirements for users.
 
-Le correctif en préparation pour 0.1.11 rétablit le nom public « Atelier Kanban », l'icône officielle, les métadonnées Windows et un diagnostic visible lors d'un échec depuis le raccourci. Il utilise un nouvel espace par défaut : `%LOCALAPPDATA%/AtelierKanban/workspace` sous Windows, `~/Library/Application Support/AtelierKanban/workspace` sous macOS et `$XDG_DATA_HOME/atelier-kanban-workspace` sous Linux, avec le repli habituel `~/.local/share`. Le mode portable conserve `data` dans son installation.
+## UI build
 
-Un espace compatible déjà présent dans l'ancien emplacement reste utilisé. Un nouvel espace déjà initialisé est réutilisé. Si l'ancien dossier contient un format non reconnu, le lancement interactif demande une confirmation avant d'ouvrir un espace vide distinct. Le refus ne crée aucun espace. Aucun déplacement, conversion ou effacement implicite n'est effectué. Un marqueur invalide, un lien ou un dossier inaccessible reste une erreur, sans repli vers des données vides.
+```sh
+cargo fetch --locked
+cargo xtask build-ui
+```
 
-Le nouveau contrôle Setup vérifie le vrai raccourci installé, ses arguments vides, ses métadonnées, le lancement normal dans un profil synthétique, le refus puis l'acceptation du nouvel espace, la préservation du fichier ancien et l'arrêt avec les paramètres par défaut. Le chemin installé contient un espace. Ce contrôle est réservé au bureau jetable CI et reste à exécuter avant la nouvelle livraison. Les tests locaux n'actionnent pas de dialogue sur le bureau personnel.
+Release assets are written to `.artifacts/rust-ui`. The build runs Trunk offline with locked dependencies, externalizes the module loader for the content security policy and validates assets. Limits are 64 MiB per asset and 256 MiB in total.
 
-Une installation 0.1.10 doit être remplacée depuis le nouveau Setup pour bénéficier du lanceur et de l'icône corrigés. La mise à jour du payload seule conserve son bootstrap initial. La désinstallation conserve les données utilisateur. Les fichiers publiés de 0.1.10 ne sont pas remplacés.
+`cargo xtask build-ui --dev` writes `.artifacts/rust-ui-dev` using incremental compilation, no debug information and UI optimization level 1. Development output is separate from the release payload.
 
-L'inspection du binaire publié 0.1.10 montre aussi un import de `VCRUNTIME140.dll`. Windows utilise maintenant le runtime C statique via [`crt-static`](https://doc.rust-lang.org/reference/linkage.html#static-and-dynamic-c-runtimes). Le test du binaire et la qualification du Setup inspectent les DLL réellement importées avec le `dumpbin` des outils MSVC. Les DLL Visual C++ externes sont refusées. La compilation Windows nécessite donc les outils MSVC, le SDK Windows avec `rc.exe` et `vswhere`/`dumpbin` pour cette vérification. Ces outils ne sont pas nécessaires sur le PC utilisateur.
-
-La première version de cette voie de distribution était `0.1.10`. Le workflow manuel `Windows prerelease` reçoit l'identifiant d'une campagne `Rust rebuild` réussie sur le même commit de `main`. Les contrôles, les tests natifs, le navigateur et la livraison Windows doivent tous avoir réussi. Un autre dépôt, une branche différente, un autre workflow, un job ignoré ou un commit différent sont refusés.
-
-La clé publique Ed25519 est celle des anciennes releases Node, extraite du document public au tag `v0.1.9`. Son encodage brut base64 est `Me0AEzOtX3PmBRk70z5cCW81EFsYENLNOxcG1qpEWOs=`. La confiance de distribution utilise `synthetic=false` et cette clé est épinglée dans le binaire. Les clés synthétiques restent réservées aux fixtures choisies explicitement. La clé privée PKCS8 PEM demeure dans le secret GitHub existant `RELEASE_SIGNING_KEY`. Aucun nouveau secret ni fichier privé local n'est créé. Seules les deux étapes de signature lancent le runner déjà compilé avec ce secret. Les compilateurs, le Setup et les processus applicatifs ne le reçoivent pas.
-
-Le workflow récupère le payload déjà qualifié, produit le manifeste `.zip.signed.json` attendu par le moteur de mises à jour, puis reconstruit le Setup avec cette confiance. Le vrai Setup est requalifié avec menus natifs, arrêt, mise à jour installée, conservation des données, désinstallation et réinstallation. Son successeur synthétique signé reste dans le runner jetable et n'est jamais téléversé ni publié.
-
-Les quatre assets de distribution sont l'archive de mise à jour `atelier-VERSION-x86_64-pc-windows-msvc.zip`, son manifeste signé, le Setup et `atelier-update-public.json`. Le fichier `SHA256SUMS` couvre ces quatre fichiers. `SHA256SUMS.sig` contient une signature Ed25519 base64 canonique sur les octets exacts du préfixe `atelier-kanban-release-checksums/1\n` suivi des octets de `SHA256SUMS`. Le préfixe contient un véritable saut de ligne. La commande `cargo xtask verify-release-checksums SHA256SUMS SHA256SUMS.sig` utilise la clé publique épinglée. Chaque empreinte est aussi vérifiée avant publication.
-
-La publication crée une prérelease GitHub sans remplacer la dernière release stable. La recherche automatique des mises à jour stables ne propose pas les préreleases. Cette signature de distribution ne constitue pas un certificat Windows Authenticode et ne supprime pas les avertissements SmartScreen. Linux et macOS ne sont pas distribués dans cette prérelease. Une archive de mise à jour n'est pas une installation portable déjà initialisée.
-
-## Fabrication et contenu
+## Payload and archives
 
 ```text
 cargo xtask third-party-notices NOTICES.txt
@@ -38,25 +33,63 @@ cargo xtask archive-package OUTPUT ARCHIVE.zip
 cargo xtask verify-archive ARCHIVE.zip TARGET
 ```
 
-Cibles : Windows x64, Linux x64/ARM64, macOS x64/ARM64. Le payload contient uniquement le binaire `atelier`, l’interface Leptos/WASM et ses assets autorisés, LICENSE, README, avis de dépendances et manifeste. Le runtime Node, les sources/outils historiques, bases, jetons, sauvegardes, logs et exécutables de faisabilité sont exclus. Le manifeste donne tailles/SHA256/architecture ; sa seule présence n’authentifie pas une archive.
+The payload contains the native `atelier` binary, approved UI assets, LICENSE, README, dependency notices and a manifest. It excludes databases, credentials, backups, logs, source tools and feasibility executables. The manifest records sizes, SHA256 values and architecture. A manifest alone does not authenticate an archive.
 
-Staging et publication utilisent un temporaire voisin et refusent une destination existante. Le lecteur ZIP partagé borne entrées/tailles, vérifie chemins/types/collisions/CRC/SHA256/cible et refuse liens, chemins absolus ou traversées. L’exécutable reçoit son mode natif. Ces contrôles sont réutilisés par l’installation et l’update.
+Staging uses a neighboring temporary directory and refuses existing destinations. ZIP handling bounds entries and sizes and rejects traversal, absolute paths, links, unsupported types and collisions. Extraction verifies CRC, hashes and target. Native executable permissions are preserved.
 
-Les avis sont générés depuis `cargo metadata --locked --offline` et les textes locaux des crates, pour toutes les plateformes et outils de fabrication : source crates.io connue, fichier borné à 1 Mio et total 32 Mio, refus des textes manquants ou chemins extérieurs. Les archives qui omettent leurs textes utilisent uniquement les compléments amont explicites de `xtask/licenses/` : nom/version, déclaration, dépôt, révision Cargo, checksum verrouillé et SHA256 des textes sont vérifiés hors ligne. Chaque avis donne aussi le lien de son archive source exacte. Les inconnus restent refusés ; cet inventaire de déclarations ne constitue pas une certification juridique. Les avis entrent dans l’inventaire signé. La collecte réelle et l’examen des composants natifs embarqués restent à effectuer ; le générateur écrit ne constitue pas leur preuve.
+Dependency notices are generated offline from locked registry packages and their local texts, including build tools and all targets. Missing texts require explicit version specific [supplements](../xtask/licenses/README.md). Unknown or changed evidence is refused.
 
-Dépendances de fabrication : toolchain/Cargo.lock du dépôt, Trunk 0.22.1, wasm-bindgen CLI 0.2.130, compilateur natif et SQLite embarqué ; Inno Setup 6 sous Windows, dpkg-deb/rpmbuild/desktop-file-validate sous Linux. Le conteneur ZIP et Ed25519 réutilisent les crates verrouillées. Aucun de ces outils de fabrication n’est ajouté au runtime applicatif.
+## Distribution signatures
 
-`cargo xtask build-ui` utilise le profil release de Trunk, avec les mêmes versions épinglées et dépendances verrouillées hors ligne. Le WASM debug n'est pas le payload de livraison. Le serveur conserve sa borne de 64 Mio par asset et de 256 Mio au total ; un refus de lecture identifie l'asset concerné.
+Signed metadata binds application identity, schema, target, version, archive size and SHA256, plus the manifest fingerprint. Trust must be selected independently of the archive. A package cannot authorize its own key.
 
-`cargo xtask build-ui --dev` est réservé à l’aperçu local : Trunk ne reçoit pas `--release`, sa destination absolue est `.artifacts/rust-ui-dev` et son sous-processus reçoit uniquement pour cette commande `CARGO_PROFILE_DEV_DEBUG=0` et `CARGO_PROFILE_DEV_INCREMENTAL=true`. Le profil Cargo applique `opt-level=1` à `atelier-ui`. Les versions épinglées, le verrouillage hors ligne et l’externalisation du chargeur restent identiques. `Atelier.cmd` utilise cette destination ; la CI navigateur et les paquets conservent le profil release et `.artifacts/rust-ui`. Après production, les deux profils refusent explicitement un asset supérieur à 64 Mio ou un total supérieur à 256 Mio.
+Published releases use the distribution key pinned in the application. Synthetic keys are restricted to explicit fixtures. Private signing material must never appear in payloads, reports or logs.
 
-Mesure locale du premier profil dev, avant cet ajustement : compilation réussie en 59 s puis reconstruction inchangée en 7,82 s, mais WASM de **277 613 094 octets**, supérieur à la limite ; cet essai ne produit donc pas une interface utilisable. La sortie release a été restaurée, avec reconstruction en cache observée à 3,8 s. Après optimisation légère et noms encodés, le build dev séparé réussit : **20 412 294 octets**, 2 min 27 s pour la compilation UI puis **4,16 s** pour une relance complète sans changement. Ces observations ne constituent pas une comparaison à conditions égales et ne mesurent pas une reconstruction après édition. Aucun scénario visuel local n'a été exécuté ; la première compilation peut rester longue.
+Release files can include an update archive named `atelier-VERSION-TARGET.zip`, its `.zip.signed.json` metadata, platform installers and `atelier-update-public.json`. `SHA256SUMS` records release file hashes. Its Ed25519 signature covers the bytes of `atelier-kanban-release-checksums/1\n` followed by the checksum file, where `\n` represents a newline.
 
-La lecture du WASM intermédiaire a identifié une section de noms de 55 120 756 octets pour 17 990 012 octets de code, avant l’expansion observée après wasm-bindgen. Le lien Rust d’`index.html` porte désormais `data-no-demangle`, option documentée par [Trunk 0.22.0](https://github.com/trunk-rs/trunk/blob/a3026f888c4beeca8cb3c378ac87f2c9f19b1521/guide/src/assets/index.md) et transmise à `wasm-bindgen --no-demangle` par son [pipeline de cette version](https://github.com/trunk-rs/trunk/blob/a3026f888c4beeca8cb3c378ac87f2c9f19b1521/src/pipelines/rust/wasm_bindgen.rs). Elle conserve les noms Rust encodés sans demander leur expansion lisible. Les mesures du profil ajusté ci-dessus incluent également `opt-level=1` ; elles n'isolent pas l'effet de ce seul attribut. Les limites restent inchangées.
+```text
+cargo xtask verify-release-checksums SHA256SUMS SHA256SUMS.sig
+```
 
-Les builds locaux sont autorisés avec les ressources normales de la machine, en profil dev comme release. Preview n’impose ni affinité CPU, ni priorité réduite, ni limite à un job Cargo. Cette autorisation ne transforme pas une compilation en preuve de tests, de Clippy ou de scénario réussi ; ces vérifications restent dans la campagne CI autorisée.
+Distribution signatures authenticate package content. They are separate from Windows Authenticode and do not remove SmartScreen warnings. An update archive is not an initialized portable installation.
 
-## Signature synthétique
+## Installation
+
+```text
+atelier install --archive ARCHIVE.zip --signature SIGNED_METADATA.json --trust TRUSTED_PUBLIC_KEY.json --destination NEW_INSTALLATION --mode portable
+```
+
+Installation refuses an existing destination. It keeps a stable launcher, trusted metadata and separate payload versions. The selected active payload must pass installation validation. Data locations and first launch behavior are documented in [launch and data](rust-launcher.md).
+
+Windows Setup integrates the official icon, version resources and shortcut. Uninstallation preserves workspace data. Linux system installations are maintained through the package manager. Desktop integration, tray behavior and native installers require verification on the actual target desktop.
+
+## Application updates
+
+The Updates screen checks the latest stable release of `FluryWaana/atelier`. It accepts numeric `VERSION` or `vVERSION` tags with three components and offers only newer versions. Prereleases are excluded from this stable channel.
+
+A compatible release must provide the target archive and signed metadata in the same release and repository. Download redirects are restricted to permitted GitHub HTTPS hosts. URLs, response sizes and duration are bounded. No GitHub token or replacement trust key is requested from the user.
+
+The server rereads the selected release before download. Signed metadata is authenticated before downloading the archive. Archive size and hashes are then checked by the package preparer. Progress reports actual received bytes and the signed total. Only one download can run per installation.
+
+A source build can inspect releases. Activation requires an installed package with trusted metadata. Unsaved drafts block restart.
+
+## Backup and recovery
+
+Before activation, the worker stops the server, locks the workspace, resolves external effects, checks SQLite integrity and creates an atomic catalog backup. An absent database is not created by this step. A failure prevents activation.
+
+The update journal records the backup and activation state. Rollback restores the previous binary while retaining the current database and human files. It does not automatically restore data that could erase recent work. Unsupported database schemas remain errors. A future schema migration requires its own reversibility checks.
+
+Manual archive controls use these commands:
+
+```text
+atelier update-preview --archive NEXT.zip --signature NEXT.json --data-dir SYNTHETIC_DATA --port 4317
+atelier update-status
+atelier update-apply --operation ID --confirm
+atelier update-cancel --operation ID --confirm
+atelier update-recover --operation ID --confirm
+```
+
+## Synthetic package testing
 
 ```text
 cargo xtask synthetic-update-key NEW_KEYS
@@ -64,96 +97,4 @@ cargo xtask sign-package ARCHIVE.zip TARGET NEW_KEYS SIGNED_METADATA.json
 cargo xtask verify-signed-package ARCHIVE.zip SIGNED_METADATA.json NEW_KEYS/synthetic-update-public.json TARGET CURRENT_VERSION
 ```
 
-Les clés produites par `synthetic-update-key` sont exclusivement synthétiques. Le générateur refuse réutilisation/remplacement et la clé privée PKCS8 n'entre jamais dans une livraison. La clé publique doit être choisie séparément du paquet : un document ne peut pas s'autoriser lui-même. La signature lie application/schéma, cible, version, taille/SHA256 d'archive et empreinte du manifeste. La préparation vérifie signature et version strictement supérieure avant lecture/extraction. La voie de distribution distincte est décrite plus haut.
-
-## Installation et update Rust
-
-```text
-atelier install --archive ARCHIVE.zip --signature SIGNED_METADATA.json --trust SYNTHETIC_PUBLIC_KEY.json --destination NEW_INSTALLATION --mode portable
-atelier update-preview --archive NEXT.zip --signature NEXT.json --data-dir SYNTHETIC_RUST_DATA --port 4317
-atelier update-status
-atelier update-apply|update-cancel|update-recover --operation ID --confirm
-```
-
-L’installation refuse une destination existante. Elle conserve lanceur stable, confiance externe, reçus signés et slots `versions/<empreinte-archive>` ; `current.json` désigne version active et précédente. Le lanceur relit leur intégrité et empêche une version inactive de servir les données.
-
-L’aperçu réserve son journal avant I/O et lie données/coffre/port/ancien pointeur/contenu signé. La confirmation lance un worker détaché qui arrête l’instance authentifiée, attend son verrou, bascule atomiquement, démarre sans navigateur et compare la **version réellement exécutée**. Échec de démarrage/version : retour du code puis vérification du démarrage précédent. Arrêt/reprise, changements humains et effets incertains restent explicites ; une commande ambiguë n’est pas rejouée.
-
-Le rollback ne restaure, ne remplace et ne supprime jamais la base, les dépôts ou les fichiers humains. Pointeur/données/code modifiés, service étranger ou état illisible sont conservés pour examen. Les effets Jira/forge/Tempo/connecteurs et mises à jour de CLI incompatibles bloquent l’activation. L’écran bilingue conserve les brouillons et exige une confirmation liée à l’opération relue.
-
-## Formats et maintenance
-
-```text
-cargo xtask build-installers ARCHIVE.zip SIGNED_METADATA.json PUBLIC_KEY.json NEW_OUTPUT
-atelier verify-installation
-atelier recover-package-maintenance --root ABSOLUTE_INSTALLATION --confirm
-```
-
-`build-installers` exige `CI=true` et `ATELIER_RUST_FINAL_CAMPAIGN=1`. Il prépare et vérifie une installation signée neuve : Setup x64 utilisateur Windows (`ATELIER_ISCC` absolu), DEB/RPM système Linux x64/ARM64 ; macOS utilise le portable. Les recettes n’embarquent aucun Node. Les scripts Linux sont conservés en LF et les modes des fichiers permettent lecture/exécution par les autres comptes.
-
-Les recettes DEB/RPM déclarent `xdg-utils` pour l’ouverture par le bureau, ainsi que le stockage natif des secrets, Zenity et les outils de verrouillage nécessaires. Un navigateur et un hôte de tray appartiennent au bureau installé ; XFCE/exo et Epiphany sont les outils réels de la fixture CI, pas des composants ajoutés au payload Rust. Le job de qualification installe aussi `xdg-utils` explicitement, y compris sur le runner ARM64 minimal.
-
-Le serveur Windows conserve un mutex global entre sessions ; Setup/désinstallation réservent la maintenance et refusent toute instance active, sans arrêt forcé. Sous Linux, chaque serveur système conserve un verrou partagé ; le gestionnaire exige l’exclusivité et pose un marqueur qui empêche les nouveaux lancements. Un verrou système absent/modifié ou lié ne devient pas un accès portable implicite.
-
-`verify-installation` contrôle bootstrap, slots et reçus sans ouvrir de données. Le retrait refuse code modifié, reçu étranger et historique nécessitant un examen. Les fichiers humains non suivis et données sont conservés. La récupération Linux exige verrou exclusif, marqueur exact et installation signée complète ; elle conserve le marqueur dans un reçu et ne répare pas silencieusement une installation partiellement effacée.
-
-Les recettes DEB/RPM conservent leur outil et l’archive signée sous `/usr/lib/atelier-kanban-rust` ; le code actif sous `/opt/atelier-kanban-rust` appartient au cycle Rust. Avant remplacement, le gestionnaire réserve la maintenance sous verrou exclusif. Après extraction, `system-package apply` vérifie confiance, signature, cible et version réellement compilée, prépare un slot puis bascule le pointeur atomiquement. L’écran d’update système guide vers le gestionnaire ; il ne tente pas une écriture utilisateur dans `/opt`.
-
-`system-package recover --root /opt/atelier-kanban-rust --confirm` reprend hors ligne depuis le journal de code et la confiance installée. Le journal persistant bloque le démarrage même si le marqueur manque ; une récupération du marqueur historique ne peut pas lever ce blocage. Un échec garde le code précédent vérifié ou laisse l’opération explicitement incertaine. Aucun parcours ne lit, restaure ou rétrograde la base. Le retrait déplace seulement les fichiers suivis, inchangés, dans un dossier conservé ; les fichiers humains restent en place. Les préparations et retraits conservés sont bornés à deux chacun, les slots à seize et 1 Gio : la limite refuse l’opération sans effacement automatique. Un contenu humain modifié, une identité de dossier différente ou un effet ambigu impose une intervention explicite.
-
-Sous Windows, Inno retire les fichiers et inscriptions qu’il suit. Le scénario Setup applique d’abord l’archive successeur existante, vérifie version réellement servie, conversation et historique précédent, arrête puis désinstalle. Les slots/reçus créés ensuite par l’updater Rust restent inactifs après désinstallation ; aucune suppression récursive de ces fichiers ni du contenu humain n’est promise. Ces mécanismes et scénarios restent des candidats non exécutés.
-
-## Lanceur, tray et transfert
-
-`launch/stop/serve` vérifient l’identité loopback/session/données ; l’ouverture ne relance pas une instance disparue et le tray est lié au PID de son serveur. Le jeton utilisé pour vérifier l’instance est conservé pour l’action, sans relecture vers une session remplacée. L’arrêt doit aussi attendre la libération du verrou de données avant de confirmer un redémarrage sûr.
-
-Le serveur natif possède le helper tray du même exécutable : thread principal AppKit, boucle Windows, backend StatusNotifier Linux. Menus Ouvrir/Quitter bilingues, actions sérialisées, refus visible et retrait sur EOF du propriétaire. Aucun Node/Python/.NET ni jeton en arguments/environnement. Linux sans bureau/D-Bus n’ouvre pas de tray ; une création refusée laisse l’application accessible dans le navigateur. Windows/macOS exigent un rectangle réel avant READY ; le scénario Linux observe l’Id/pixels/état de l’item produit dans l’hôte D-Bus puis son retrait. Clics et focus restent à qualifier.
-
-Un second scénario Linux démarre un vrai serveur synthétique puis utilise les interfaces publiques StatusNotifier/DBusMenu : sélection des actions bilingues par leur label, événement externe `clicked` pour Ouvrir, fichier de session navigateur préparé et retour à Prêt, puis Quitter avec serveur HTTP arrêté, verrou libéré et item retiré. Il n’appelle aucune fonction interne d’action. Raccordé à `native-tray --ignored`, il échouait à Ouvrir sur `40470039650` ; les corrections suivantes ont réellement réussi ce parcours sur Linux x64 et ARM64, notamment dans `40481745917` sur `654f066`. Les résultats et commits suivants restent détaillés dans le relevé de qualification.
-
-Le helper tray conserve les variables non secrètes de session bureau et les répertoires XDG configurés par son propriétaire. Le scénario Linux utilise un véritable hôte XFCE et `exo-open`, avec association HTML/http/https vérifiée dans des répertoires XDG jetables ; aucune substitution par `BROWSER` ni faux navigateur. La CI réutilise Chrome lorsque son entrée desktop système est présente et installe Epiphany sinon, pour éviter les téléchargements inutiles du runner x64. Ce choix de fixture attend sa propre requalification. Le [source officiel xdg-open 1.1.3](https://gitlab.freedesktop.org/xdg/xdg-utils/-/blob/v1.1.3/scripts/xdg-open.in) montre que son mode générique attend directement le navigateur, tandis que le mode XFCE délègue à l’activation native. Atelier exige toujours un retour réussi de l’ouvreur sous 15 s ; une expiration reste une erreur, sans tuer le navigateur externe. Le rendu WASM relève du parcours WebDriver distinct ; aucun succès n’est déduit d’un simple `spawn`.
-
-**Preuve bureau macOS encore manquante :** dans une session jetable, lancer le paquet de la cible avec un dossier de données synthétique explicite, cliquer l’icône puis Ouvrir, constater le fichier de session navigateur et le retour du menu à Prêt, puis cliquer Quitter. Consigner cible/commit/version, fermeture du serveur HTTP, acquisition du verrou de données et disparition de l’icône, sans publier de jeton. Le scénario AppKit existant ne prouve que présence/retrait sur EOF ; il ne remplace pas ces interactions ni leur résultat. Le rendu WASM relève des parcours WebDriver distincts.
-
-Le transfert Rust portable explicite réutilise `import-data` et son choix de source confirmé : source verrouillée, format ATKR contrôlé, copie privée bornée puis publication, aucun ancien format Node. Session/verrous/autorisation locale de dépôts ne sont pas transférés ; chiffrement intercompte non promis. Les sauvegardes sont conservées.
-
-## Campagne finale préparée, non lancée
-
-```text
-cargo xtask qualify-packages .artifacts/rust-delivery
-cargo xtask test-updates --prepared-delivery .artifacts/rust-delivery
-cargo test -p atelier-app --test native-tray --locked -- --ignored
-cargo test -p atelier-app --test native-import --locked -- --ignored
-cargo test -p atelier-app --test synthetic-tls --locked -- --ignored
-cargo test -p xtask --test forge-review-tls --locked -- --ignored
-```
-
-Le workflow reste exclusivement manuel. Par défaut, `scope=browser`, `browser=chrome` et `journey=jira` ciblent un seul parcours. Les modes `native` et `delivery` ciblent la plateforme choisie, `windows` par défaut. Le mode `scope=desktop` cible la livraison Setup Windows et tous les parcours Safari sur macOS 26, avec leurs préparations de binaires et d'assets. Il impose ces deux cibles indépendamment des champs de plateforme, navigateur et parcours. Les tests natifs et les livraisons macOS conservent macOS 15 ARM et Intel. `scope=full, platform=all` sélectionne explicitement les cinq cibles natives et les quatre navigateurs. Le raccourci `full_matrix` vaut `false` par défaut. Une sélection partielle ne satisfait jamais la checklist globale.
-
-Les assets WASM candidats sont construits une seule fois et contrôlés avant utilisation. Livraison et navigateurs les réutilisent indépendamment : un échec navigateur ne masque plus les résultats des installeurs. Les étapes DEB, RPM et mise à jour restent indépendantes après fabrication réussie ; leurs échecs ne sont pas neutralisés. Les caches de compilation sont sauvegardés même après un échec de scénario. Les artefacts restent des candidats de préproduction, sans publication. Voir [les résultats effectifs](rust-final-qualification.md) : les vrais installeurs restent sans preuve.
-
-`qualify-packages` construit le vrai binaire release et un successeur, génère avis/ZIP/signatures synthétiques, installe puis exécute le lanceur portable : version observée, destination existante refusée, conversation conservée au redémarrage, session renouvelée et arrêt. Il mesure les durées effectives de démarrage, redémarrage, arrêts et relecture d’état ainsi que la taille réelle de l’archive. Ce sont des observations du runner sans baseline ni gain de vitesse revendiqué. Il produit les formats natifs et un rapport des seules étapes achevées ; installation native et update/rollback restent explicitement en attente de leurs étapes distinctes.
-
-Les scénarios natifs distincts prévoient Setup/réinstallation/refus d’un serveur actif ou code humain sous Windows ; DEB/RPM via vrais gestionnaires dans conteneurs Ubuntu/Fedora jetables de l’architecture native, utilisateur synthétique distinct, retrait et upgrade actifs refusés, confiance étrangère et version compilée incorrecte refusées, récupération hors ligne, upgrade réel puis conversation relue, code modifié et données/fichiers humains conservés. Les logs/JSON effectifs et archives restent des artifacts CI de préproduction, jamais une release. La clé privée et les données de fixture n’y sont pas incluses.
-
-Les trois étapes natives explicites `test-updates --prepared-delivery` vérifient et réutilisent les deux archives signées déjà fabriquées. Elles conservent les assertions de changement de version réellement exécutée, session et conversation, puis de rollback après version compilée incorrecte. Leur rapport n’est écrit qu’après réussite effective ; la commande sans option conserve le parcours autonome avec compilation. Les tests de desktop explicitement ignorés ne seront des preuves qu’après invocation réelle et lecture de leurs résultats. `native-import` concerne Windows ; les interactions POSIX du sélecteur restent à qualifier.
-
-Les parcours TLS natifs utilisent des CA et serveurs HTTPS temporaires synthétiques. Sur macOS, l’outillage de test compile un Git épinglé et vérifie son lien avec le curl Homebrew OpenSSL ; son chemin précède le Git système et reste transmis aux sous-processus isolés. Cet outil de qualification reste hors payload. Aucun repli de confiance vers le trousseau personnel n’est prévu.
-
-Linux utilise des sessions D-Bus/XDG et keyrings jetables. macOS crée un trousseau temporaire dédié/marqué et transmet son chemin sous garde CI/finale/jetable : lectures, écritures et suppressions de secrets lui sont explicitement liées, sans recherche dans le trousseau par défaut. Les probes de comptes/trousseaux déjà explicitement ciblés conservent leur scope. Les mots de passe/clés synthétiques restent hors arguments et journaux. Le backend refuse en CI un accès implicite au trousseau macOS par défaut.
-
-État exact : implémentation et scénarios écrits, formatage/lecture seulement ; **aucune compilation, exécution, réussite ou livraison de paquets qualifiée**. Les vrais résultats, artefacts, erreurs/reprises et limites devront être relus avant de cocher R06/R07.
-
-## Recherche et installation depuis GitHub
-
-Le panneau des mises à jour interroge la dernière release publique stable de `FluryWaana/atelier` via `GET /repos/FluryWaana/atelier/releases/latest`. Les tags acceptés sont `VERSION` et `vVERSION`, avec trois nombres. Les versions identiques ou inférieures ne sont pas proposées. Contrat GitHub : https://docs.github.com/en/rest/releases/releases#get-the-latest-release.
-
-Chaque release doit contenir `atelier-VERSION-TARGET.zip` et `atelier-VERSION-TARGET.zip.signed.json`. Le second fichier est le manifeste signé produit par `sign-package`, avec la clé déjà approuvée par l'installation. Les deux assets doivent appartenir à cette release et à ce dépôt. Aucun jeton GitHub ni nouvelle clé n'est demandé dans l'interface. Les redirections de téléchargement sont limitées aux hôtes HTTPS GitHub autorisés, sans identifiants dans l'URL. Réponses, tailles et durée sont bornées. Une release sans ces assets pour la plateforme est affichée comme incompatible. Les clés disponibles restent synthétiques. Ce changement ne constitue pas une publication ni une qualification d'une clé de release.
-
-Un clic lance téléchargement, authentification, préparation et activation. Le serveur relit la release et refuse une version différente de celle proposée. La signature est vérifiée avant le téléchargement de l'archive. La taille et les empreintes sont ensuite vérifiées par le préparateur existant. La progression expose les octets réellement reçus et le total signé, puis la vérification reste distincte. Une seule installation peut télécharger à la fois. Les brouillons bloquent le redémarrage. Les états et la récupération existants restent disponibles sans cases de confirmation supplémentaires. Le serveur lancé depuis les sources peut consulter les releases, mais seul un paquet Rust installé avec sa clé de confiance peut se mettre à jour. Les installations système Linux restent gérées par le gestionnaire de paquets.
-
-Avant l'activation, le worker arrête proprement le serveur et verrouille le dossier de données. La base existante doit passer `PRAGMA quick_check`, les effets externes doivent être résolus et une sauvegarde SQLite atomique doit réussir dans le catalogue local habituel. Son nom est conservé dans le journal de mise à jour. Un échec interdit le changement de version. Une base absente n'est pas créée par cette étape. Le retour au binaire précédent conserve la base et les fichiers humains, sans restauration automatique susceptible d'effacer un travail récent. Le format SQLite actuel refuse les schémas non pris en charge et n'effectue aucune migration implicite. Toute future migration de schéma devra qualifier séparément sa réversibilité. La sauvegarde conservée ne rend pas cette qualification facultative.
-
-La validation locale utilise uniquement des bases, clés, paquets et serveurs HTTP synthétiques. Les tests couvrent version numérique, release absente ou invalide, limites HTTP, transfert tronqué, provenance des assets, concurrence, progression et nettoyage, signature et clé étrangères, archive altérée, conservation des tables et fichiers voisins, échec de sauvegarde et récupération aux frontières du remplacement. Les scénarios WebDriver ont été adaptés aux nouveaux contrôles mais ne sont pas exécutés localement. Aucune CI, publication ou donnée utilisateur n'est utilisée.
-
-Vérifications du 30 octobre 2026, après autorisation explicite des tests locaux : `cargo test -p atelier-app --lib infrastructure::update --locked` réussit avec 16 tests. `cargo test -p atelier-app --lib backup --locked` réussit avec 10 tests, dont les deux tests de sauvegarde avant mise à jour également présents dans le premier lot. `cargo test -p atelier-app --lib http::updates --locked` réussit avec 2 tests. Cela représente 26 tests distincts. Les premiers essais sous bac à sable avaient échoué sur les sockets loopback et les publications de temporaires Windows. Les relances avec ces accès autorisés passent. `cargo check -p atelier-ui --target wasm32-unknown-unknown --locked` et `cargo check -p xtask --locked` réussissent. Le cache incrémental signale un repli de liens physiques vers des copies, sans erreur de compilation. Clippy, parcours navigateur et qualification d'une release réelle restent non exécutés. Aucun résultat R06/R07 global n'est déclaré acquis.
+These commands use synthetic keys in new directories and refuse replacement. Keep fixture private keys out of distributed files. Package, installer and update checks are described in [verification](rust-final-qualification.md).

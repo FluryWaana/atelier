@@ -1,535 +1,84 @@
-# Campagne finale Rust
+# Verification
 
-**Consigne actuelle du propriétaire : aucune CI, ni lancement ni relance.** Cette interdiction remplace l’autorisation antérieure de relances correctives. Les scénarios et contrôles restants demeurent non qualifiés ; aucune demande de relance n’est déduite des commits ou pushes.
+Verification covers source checks, native tests, browser journeys, packages and desktop interactions. Each result applies to the exact source revision, target and scenario executed. A written scenario, successful compilation or skipped job is not evidence that a user journey passed.
 
-## Optimisation du workflow manuel
+## Local source checks
 
-Le formatage et les contrôles WASM sont regroupés dans un job unique. Les contrôles natifs, les parcours navigateur, les installateurs et les mises à jour restent distincts et conservés. Les caches natifs couvrent les cinq plateformes et sont renouvelés à chaque exécution. Le Git synthétique macOS est mis en cache avec sa dépendance curl, sa version et son backend TLS revalidés après restauration.
+Run from the repository root with the committed toolchain and lockfile:
 
-La compilation des trois exécutables de test navigateur et la génération des avis de licences démarrent en parallèle du WASM. Une archive conserve leurs permissions et les transmet aux jobs navigateur de la même plateforme. Le mode `test-ui --prepared-assets --prepared-binaries` utilise ce paquet sans compilation ni accès au registre Cargo. La racine est prise dans `GITHUB_WORKSPACE` pour accepter un chemin de checkout différent. Un échec de préparation sur une plateforme ne supprime pas les parcours des autres plateformes. Les sélections de campagne ont des groupes de concurrence distincts.
+```sh
+cargo fmt --all -- --check
+cargo clippy --workspace --exclude atelier-ui --all-targets --locked -- -D warnings
+cargo test --workspace --exclude atelier-ui --locked
+cargo clippy -p atelier-ui --target wasm32-unknown-unknown --all-targets --locked -- -D warnings
+cargo check -p atelier-ui --target wasm32-unknown-unknown --locked
+cargo fetch --locked
+cargo xtask build-ui
+```
 
-Ces changements restent candidats tant que le workflow modifié n'a pas été exécuté. Aucun gain de durée CI ni qualification multiplateforme n'est revendiqué. L'interdiction de lancer ou relancer la CI reste applicable.
+Use a separate `CARGO_TARGET_DIR` when another development process owns build outputs. Native and WebAssembly checks are separate because the UI targets `wasm32-unknown-unknown`.
 
-Vérifications locales de ce lot sur Windows : Actionlint, `cargo fmt --all -- --check`, Clippy natif du workspace avec tous les targets et `-D warnings`, suite de tests native du workspace, Clippy WASM et check WASM réussis. Le build UI release utilise Trunk 0.22.1 et wasm-bindgen 0.2.130 et réussit également. Les tests couvrent les binaires préparés manquants, un chemin remplacé par un dossier et le démarrage depuis un autre workspace sans Cargo. La syntaxe Bash et les commandes tar sont vérifiées avec Git Bash. Un contrôle synthétique sous WSL rejoue les quatre cas du test de cache Git, avec réutilisation valide et refus des versions ou backends TLS incorrects. Le test Rust Unix correspondant n'est pas exécuté par la suite Windows. Les scénarios explicitement ignorés par Cargo restent non exécutés.
+## Browser journeys
 
-Les quatre parcours WebDriver `application`, `diagnostics`, `jira` et `updates` réussissent sous Edge 155.0.4283.62 avec le pilote de même version. Les exécutables et les avis de licences sont archivés avec Git Bash puis extraits dans un workspace synthétique distinct du chemin de compilation. Les assets proviennent du build UI release local. Le mode préparé réutilise ces seuls fichiers, notamment pour fabriquer les paquets synthétiques du parcours de mise à jour. Le premier essai est interrompu par la capture PowerShell d'un message normal de Git. Après correction de la capture et nettoyage des seuls processus de cet essai, l'exécution complète se termine avec le code 0. Journaux locaux : `.artifacts/pipeline-optimization/prepared-edge-all-final.log` et `.artifacts/pipeline-optimization/prepared-edge-all-final.stderr.log`. Aucun navigateur autre qu'Edge ni installateur natif n'est qualifié par cet essai.
+Use a compatible installed browser and local WebDriver. Browser sessions, repositories, credentials, agents and application data must be synthetic. Journeys run the actual application's `serve` entry point.
 
-## Reprise fidèle des écrans — candidat en cours
+```text
+cargo xtask test-ui --prepared-assets
+```
 
-Après rejet de la preview par le propriétaire, les sources `7f48996` deviennent le modèle direct des écrans et non une simple inspiration. La feuille CSS historique complète et sa licence Bootstrap 5.3.8 sont reprises, avec des liaisons limitées aux composants Rust. Shell, création, commandes/recherche, tableau, archives, aperçu, agents, processus, branches/PR, brainstorm, réglages, projets, tâche et temps sont raccordés à partir des templates historiques. Les modifications restent candidates : présence de code et compilation ne prouvent pas la fidélité visuelle.
-
-La navigation utilise des chemins `/overview`, `/board`, `/brainstorm`, `/agents`, `/processes`, `/worktrees`, `/time`, `/archives`, `/settings`, `/updates` et `/tasks/{id}` ; le serveur sert l’interface sur ces seules routes connues, sans masquer les chemins inconnus ou privés. Le fragment de session initial reste transitoire puis retiré ; aucune navigation utilisateur par ancre n’est nécessaire. Retour/rechargement et protection des brouillons font l’objet de parcours adaptés, non exécutés.
-
-L’inspection Git des worktrees dispose d’une vraie lecture bornée : association et branche vérifiées, statut Git/HEAD relus et association de carte revalidée. Elle ne crée aucun worktree, ne fetch aucune origine et ne publie aucun résultat fictif. Le scénario synthétique conserve l’index et vérifie les fichiers non suivis ; écrit seulement.
-
-Adaptations de contrat explicites : un glisser-déposer change l’avancement avec comparaison de l’état attendu ; il ne lance pas implicitement un agent. La synchronisation de tickets ouvre le parcours Rust de préparation/confirmation. Le code et les diffs sont rendus comme texte échappé, avec compteurs source distincts dans les hunks ; aucune coloration syntaxique historique n’est encore revendiquée. Les autres différences de présentation restent à examiner visuellement avant toute qualification.
-
-Preuves locales de ce lot : formatage et inventaire réussis ; `cargo check --workspace --exclude atelier-ui --all-targets --locked` réussi en 42,80 s et check WASM séparé réussi en 8,09 s sur les sources finales figées. Build des assets `build-ui --dev` réussi (compilation UI 2 min 51 s, WASM produit 25 854 401 octets), puis `cargo build -p atelier-app --locked` réussi en 45,32 s. Ces durées sont celles des commandes locales, sans revendication de performance du produit. Le préfixe historique du CSS source est byte-identique sur ses 144 451 octets (SHA256 `bac7bbbd06bfea3edbc87b8e4b0f3313eb71da3fa9a8915796ba1950e317df45`) ; les seules règles suivantes lient les composants Rust. Aucun serveur ni navigateur lancé ou redémarré par ces commandes, aucun test ou Clippy exécuté et aucune CI lancée. La fidélité visuelle et les parcours adaptés restent non qualifiés.
-
-## État courant
-
-La reconstruction n'est pas terminée. Dernière campagne complète : [40493450905](https://github.com/FluryWaana/atelier/actions/runs/40493450905) sur `342e020`. Vérification ciblée suivante : [40506116913](https://github.com/FluryWaana/atelier/actions/runs/40506116913) sur `dc27452`, Chrome/Jira uniquement, en échec.
-
-La relance ciblée [40565211292](https://github.com/FluryWaana/atelier/actions/runs/40565211292) sur `47fcb2e` compile les assets et les exécutables puis échoue plus loin : PATCH de `brainstorm-project` refusé avec HTTP 409. La fixture précédente conserve volontairement une transition Jira incertaine, ce qui interdit toute modification globale de projet. Le scénario configure désormais son projet synthétique avant démarrage, sans supprimer cette incertitude ni affaiblir la garde. Les opérations suivantes restent à qualifier.
-
-Le propriétaire a constaté dans la preview une régression majeure du design. La comparaison avec `7f48996` confirme la perte du shell latéral sombre/mauve, des métadonnées de cartes et du workspace de tâche. La compilation et les parcours techniques précédents ne prouvaient pas la fidélité visuelle. Restauration en cours depuis les sources historiques, sans runtime Node ; aucune réussite visuelle revendiquée et aucun nouveau workflow lancé pendant ce travail. Les réglages en dialogue au lieu d’une page et les vues de navigation absentes restent des écarts ouverts tant qu’ils ne sont pas restaurés et examinés.
-
-Restauration candidate compilée : logo historique byte-identique, palette et shell, cartes renseignées, réglages en navigation verticale, quatre onglets de tâche et explorateur partagé fichiers/diff. Composants et brouillons restent montés ; le clavier et le retour au champ invalide font l’objet de scénarios écrits, non exécutés. `cargo check --workspace --exclude atelier-ui --all-targets --locked`, le check WASM séparé, le formatage et l’inventaire réussissent localement. Aucun test, Clippy ou navigateur local exécuté. Ces checks ne qualifient ni la fidélité visuelle, ni les parcours modifiés, ni les changements parallèles du mode développement à `0c87b5a`.
-
-Restauration poussée à `f6163c4`. Build local des assets de preview `build-ui --dev` réussi (code de sortie 0, compilation UI 2 min 46 s), avec le logo dans `.artifacts/rust-ui-dev`. Aucun serveur ni navigateur lancé ou redémarré par cette commande. Les assets construits ne constituent pas une capture ni une validation visuelle.
-
-Cette vérification ciblée construit et contrôle les assets WASM avec succès, puis échoue sur l’assertion `#task-forge-kind.disabled === true`. Le sélecteur hérite de la désactivation de son `fieldset` : sa propriété propre reste fausse. Le scénario contrôle désormais `matches(':disabled')` pour les états bloqué et débloqué, sans modifier la protection produit. Les étapes Jira suivantes, dont les filtres du rapport, ne sont pas qualifiées par cette exécution. Formatage et compilation des cibles xtask réussis localement après correction ; aucun test local ni nouveau workflow pendant le diagnostic.
-
-| Périmètre | Preuve actuelle |
+| Variable | Purpose |
 | --- | --- |
-| Sources actives | Rust à la racine, quatre crates ; retrait Node effectué à `fe5095c`, référence conservée dans Git |
-| Jobs natifs complets | Les cinq jobs réussissent à `342e020`, y compris TLS et probes natives effectivement invoquées |
-| Application navigateur | Réussite Edge, Safari et Chrome ; Firefox échoue sur l’expiration synthétique des quotas |
-| Jira navigateur | Échec des quatre navigateurs : le rapport contient aussi les deux entrées Tempo des fixtures ; attentes du scénario corrigées, sans modifier le calcul produit |
-| Mises à jour navigateur | Réussite Edge/Safari à `342e020` ; Chrome/Firefox dépassent l’attente DOM pendant la préparation. Réussite des quatre à `ee3122b`, sans qualification automatique des changements suivants |
-| Paquets | Avis, archives signées et rollback synthétique exécutés dans le parcours navigateur ; job delivery et vrais installeurs toujours ignorés, aucun paquet de livraison qualifié |
-| Bureau | Clics Ouvrir/Quitter macOS et sélecteurs POSIX encore sans preuve ; ne pas les déduire des tests AppKit sur EOF ou des sélecteurs Windows |
+| `ATELIER_TEST_BROWSER` | Select `chrome`, `firefox`, `edge` or `safari` |
+| `ATELIER_TEST_JOURNEY` | Select `application`, `diagnostics`, `jira`, `updates` or `all` |
+| `ATELIER_WEBDRIVER` | Explicit driver executable |
+| `ATELIER_TEST_BROWSER_BINARY` | Explicit supported browser executable |
+| `ATELIER_TEST_ASSETS` | Prepared UI assets |
+| `ATELIER_TEST_SERVER` | Prepared application binary |
 
-Revue corrective confiée à GPT‑6 Astra après la demande de réduire les dépenses CI. Elle corrige également une attente de persistance de filtres inexistante et un scénario éditant la description Jira verrouillée ; le brouillon utilise les instructions éditables. L’horloge Firefox instrumentée et l’attente bornée du journal de préparation restent à exécuter. Aucun scénario écrit ne vaut preuve.
+`--prepared-assets` reuses built UI files. `--prepared-assets --prepared-binaries` also reuses prepared native executables and notices without a Cargo build. Missing or invalid prepared files fail the check. Use a matching browser and driver version.
 
-Le workflow manuel permet désormais une sélection par famille, plateforme, navigateur et parcours. Les assets candidats sont partagés ; les installeurs ne dépendent plus du succès navigateur et les caches sont conservés après échec. Aucun nouveau pipeline n’a été lancé pendant cette revue. Les sélections partielles ne qualifient pas toute la reconstruction.
+Browser checks cover form validation, keyboard and focus behavior, drafts, task operations, profiles, integrations and updates. Inspect screenshots at desktop, tablet and mobile widths for presentation changes. Synthetic drag events do not establish physical drag behavior on every desktop.
 
-Les sections suivantes conservent l'historique exact des échecs et corrections, sans remplacer leurs commits par le dernier état du code.
+## Packages and desktop checks
 
-## Première exécution
+```text
+cargo xtask qualify-packages .artifacts/rust-delivery
+cargo xtask test-updates --prepared-delivery .artifacts/rust-delivery
+```
 
-Première exécution finale : [40423799275](https://github.com/FluryWaana/atelier/actions/runs/40423799275), déclenchée manuellement le 27 octobre 2026 sur `1ba8e3b56825af9d9fef6f212bf47462503eaa32`, avec `full_matrix=true`.
+Package qualification builds real release binaries and synthetic successors, checks notices and signatures, installs portable payloads and observes runtime versions, persistence, session renewal and shutdown. Update tests check actual version changes and rollback while preserving workspace records and human files.
 
-| Périmètre | État observé |
+Native installer checks must use disposable environments. Setup checks exercise the installed shortcut, icon and version resources, launch, cancellation, data preservation, update, uninstallation and reinstallation. Linux checks use real package managers in disposable native containers. macOS tray checks must exercise Open and Quit rather than infer behavior from icon presence.
+
+A browser passing on one system does not qualify another browser or a native installer.
+
+## Isolated native checks
+
+Ignored tests are opt in and retain their guards. They require the documented disposable CI or native environment rather than personal accounts or keychains. Setting a guard variable alone does not establish that the environment is safe.
+
+Linux credential probes require an isolated D-Bus/XDG session and disposable collection. macOS probes use dedicated temporary keychains and explicit account scope. Windows temporary account provisioning is CI only. Never read, lock or replace a personal credential collection.
+
+See [synthetic TLS tests](rust-synthetic-tls.md) and [process supervision](rust-posix-runtime.md) for transport and process fixtures.
+
+## Manual workflows
+
+The repository contains three workflows with manual triggers:
+
+| Workflow | Purpose |
 | --- | --- |
-| Formatage local et génération légère de l'inventaire | Commandes exécutées avec code de sortie 0 avant commit ; aucune qualification fonctionnelle |
-| Matrice native Windows x64, Linux x64/ARM64, macOS x64/ARM64 | Échec des cinq jobs à Clippy sur `extension_repositories.rs:121` (`collapsible_if`), avant tests |
-| WASM et WebDriver Edge/Chrome/Firefox/Safari | Échec des trois jobs navigateur pendant la compilation d'atelier-app ; aucun parcours exécuté avec succès |
-| Fabrication et qualification des artefacts natifs | Job delivery ignoré après échecs des dépendances ; aucun paquet qualifié |
-| Interactions manuelles macOS tray/sélecteur et sélecteur Linux | Preuves de bureau manquantes ; protocole et limites dans [les paquets Rust](rust-packages.md) |
-| Retrait physique final des références Node | Différé jusqu'à qualification ; exclusion des payloads implémentée mais artefacts encore non vérifiés |
+| [Rust verification](../.github/workflows/rust.yml) | Source checks, native tests, browsers and delivery qualification |
+| [Windows prerelease](../.github/workflows/prerelease.yml) | Signed Windows distribution from an exact qualified source run |
+| [Linux and macOS prerelease](../.github/workflows/unix-prerelease.yml) | Complete platform assets for an existing prerelease |
 
-Les résultats doivent être relus dans les vrais journaux et associés au commit exécuté. Un job configuré, ignoré, annulé ou bloqué ne constitue pas une réussite. Les éventuelles corrections et leur vérification seront consignées ici sans effacer les échecs initiaux. Aucun tag, release ou déploiement.
+Rust verification accepts these selections:
 
-## Diagnostics de la première exécution
-
-Les journaux natifs et navigateur ont été téléchargés et relus. La préparation de Git OpenSSL macOS a réellement réussi sur ARM et Intel ; cela ne prouve pas les scénarios TLS, non atteints.
-
-La compilation navigateur signale les frontières de visibilité de fonctions utilisées par HTTP (`forge::configuration`, `task_creation::path_string`, fonctions du journal CLI Windows), la possession de l'état dans la mutation détachée, l'import POSIX `Ipv4Addr`, une tranche `str` passée à `Document::set` et le format `LowerHex` absent des sorties SHA de la dépendance verrouillée. Les correctifs réutilisent l'encodeur hexadécimal existant, conservent les SHA et leur représentation, et ajoutent un vecteur connu. Une condition imbriquée et des imports/mutabilités inutiles sont corrigés sans neutraliser Clippy. Ces corrections restent à requalifier ; aucun test ni contrôle lourd local.
-
-## Corrections et blocage de la requalification
-
-Les corrections sont commitées et poussées à `9959d31`. Formatage et génération légère de l'inventaire exécutés avec code de sortie 0 ; aucun build, test, Clippy ou scénario local. Cela ne prouve pas la compilation ni la réussite des correctifs.
-
-La tentative de déclenchement du workflow manuel sur les corrections a été **rejetée avant exécution par le contrôle automatique d'approbation** : la consigne autorisait une seule campagne finale, déjà lancée ; une relance complète est considérée comme une seconde campagne coûteuse exigeant un accord explicite du propriétaire. Aucune seconde exécution n'a été créée et aucun contournement ni relance indirecte n'est autorisé.
-
-Intervention nécessaire : autorisation explicite de requalifier les corrections via le workflow manuel complet. En attendant, tous les tests natifs/TLS, parcours navigateur, artefacts/installations/mises à jour restent sans preuve de réussite ; les interactions de bureau manuelles et le retrait physique final des références Node restent également ouverts. La reconstruction n'est pas terminée.
-
-## Requalification autorisée
-
-Après accord explicite du propriétaire (« go »), le workflow complet a été déclenché sur `7f48996` (code corrigé à `9959d31`) : [40424550305](https://github.com/FluryWaana/atelier/actions/runs/40424550305). Matrice complète, contrôles conservés, aucune exécution lourde locale. Résultats en attente ; aucune réussite supplémentaire revendiquée.
-
-Les trois jobs navigateur échouent ensuite sur l'import manquant de `plain_metadata` dans `xtask/src/package.rs` : les anciennes erreurs de compilation atelier-app n'apparaissent plus, mais aucun parcours WebDriver n'est atteint. Les jobs natifs terminés signalent désormais Clippy dans atelier-app : conditions imbriquées, emprunts inutiles, découpage de tranches et position d'un module de tests ; `input<T>` nécessite aussi une erreur de taille réduite. Les correctifs conservent les contrôles et utilisent `Box<Response>` avec propagation aux 39 branches appelantes. Aucun lint désactivé. Formatage et inventaire légers uniquement exécutés sur le PC ; correctifs non requalifiés. Les jobs encore en cours et la livraison non atteinte ne sont pas considérés réussis.
-
-Les correctifs de cette exécution sont poussés à `32a6a8f`. Les trois jobs navigateur et quatre jobs natifs ont terminé en échec. Après une longue installation des prérequis, Linux x64 a atteint Clippy puis a été annulé lors de la demande d'arrêt de l'exécution déjà en échec. Le statut final global est `cancelled` ; la livraison a également été annulée sans produire de preuve. Aucun de ces statuts ne constitue une réussite. L'autorisation des prochaines relances correctives est demandée explicitement ; aucun nouveau workflow n'est lancé en attendant.
-
-Le propriétaire a ensuite explicitement autorisé les relances correctives nécessaires jusqu'au passage des contrôles ou à un blocage humain, sans ajout de fonctionnalités ni réduction des contrôles. Exécution suivante : [40425548838](https://github.com/FluryWaana/atelier/actions/runs/40425548838) sur `9327068` (code `32a6a8f`), matrice complète. Aucun résultat acquis au déclenchement.
-
-Cette exécution atteint la compilation des cibles de test natives et du binaire Leptos/WASM. Les diagnostics natifs concernent deux conversions `JsonString` dans `local-commit`, une valeur empruntée puis déplacée dans `native-tray`, une mutabilité inutile dans `native-import` et trois diagnostics Clippy des scénarios UI. Les journaux navigateur révèlent des erreurs de syntaxe de macros dans Jira/forge, une collision `Effect`, une dépendance serde directe manquante, la contrainte d'égalité d'un mémo de cartes, des appels Option sur Result et des valeurs consommées deux fois dans des vues. Les correctifs sont limités à ces causes ; aucun contrôle n'est désactivé. La dépendance serde utilise la version déjà verrouillée, sans résolution. Aucun scénario produit n'est encore déclaré réussi.
-
-Les relances intermédiaires peuvent utiliser la matrice Windows existante (`full_matrix=false`) pour limiter les coûts de découverte des erreurs communes de compilation/WASM. Elles ne qualifient jamais les autres plateformes : une exécution complète reste nécessaire pour la checklist finale.
-
-`40425548838` termine en échec ; livraison ignorée. Correctifs committés et poussés à `7ab8da8` (formatage/inventaire seulement locaux). Vérification intermédiaire Windows/WASM : [40426153120](https://github.com/FluryWaana/atelier/actions/runs/40426153120), `full_matrix=false`, sans réduction des exigences finales. Résultats en attente.
-
-`40426153120` termine en échec. Windows natif signale quatre closures redondantes dans `time-tracking.rs:212–215`, corrigées. Le journal navigateur confirme la compilation native et Leptos/WASM debug, puis le refus « Fichier trop volumineux » au démarrage du serveur ; aucun parcours produit n'est déclaré réussi. Le build UI était encore en debug : il passe en release dans la commande Trunk existante, et le refus de lecture d'asset indique désormais son nom. La borne de 64 Mio par asset reste inchangée. Ces correctifs doivent encore être exécutés.
-
-Le cache Windows natif/navigateur conserve désormais les compilations partielles avec `actions/cache/save` au même SHA, mêmes chemins et clés. Le code de l'action épinglée a été lu : sa sauvegarde automatique exige un job réussi et son option `save-always` est explicitement déclarée non fonctionnelle. Les contrôles, résultats et artefacts ne sont pas modifiés ; le gain réel reste à observer. Les 22 outils de lancement/livraison Node remplacés sont archivés à l'identique à `a27b376`, sans déplacement des sources/fixtures utilisées par Rust.
-
-## Exécution sur `0138593`
-
-[40427503293](https://github.com/FluryWaana/atelier/actions/runs/40427503293), Windows/WASM intermédiaire : échec global, livraison ignorée. Les journaux confirment Clippy natif terminé, puis les 118 tests de bibliothèque atelier-app : **115 réussis, 2 échoués, 1 ignoré**. Ce résultat ne couvre pas les autres cibles de tests que Cargo n'a pas atteintes après l'échec.
-
-La restauration échoue sur une ancienne assertion qui omet l'invalidation des révisions Tempo/modules ; le test est renforcé pour contrôler séparément révisions supérieures aux états sauvegardé et courant, réglages restaurés, coffre vidé et secours conservé. La production n'est pas modifiée pour satisfaire cette ancienne attente. L'autre échec est une expiration de la lecture de santé loopback pendant le scénario de récupération. Le correctif partagé limite les reprises à trois GET de preuve sans identifiants ; un timeout persistant reste une erreur, jamais une preuve d'absence. Aucune lecture authentifiée ni mutation n'est renvoyée automatiquement. Régressions réseau synthétiques écrites, non exécutées à ce stade.
-
-Le build Leptos/WASM release réussit et le serveur/browser démarrent. Le parcours échoue sur la première découverte du module : la capture `rust-ui-failed.png` montre « Champ de connecteur invalide ou répété. ». Le faux module utilisait l'identifiant interdit `fixtureRoot`, corrigé en `fixture-root` dans les déclarations/configurations/sélecteurs, sans assouplir le contrat de production ni l'assertion. Ce n'est pas une preuve du parcours complet. Les deux caches de compilation partielle ont réellement été sauvegardés, d'après les journaux.
-
-Le propriétaire demande ensuite le retrait complet des sources de l'ancien projet et une racine organisée autour de Rust. Sources/archives Node et comparateurs retirés, fixtures JSON utiles relogées dans les crates sans modification de contenu, pont legacy/CLI `serve-prototype` retirés ; les parcours navigateur utilisent désormais le vrai `serve`. L'inventaire est remplacé par `cargo xtask inventory [--check]`, sans Node. La génération légère locale du document utilise un équivalent PowerShell, sans compiler Rust. Ces changements doivent encore être qualifiés. Les fichiers locaux ignorés et les données utilisateur ne sont pas effacés.
-
-À la demande de simplification du lancement local, `Preview.cmd` et `scripts/preview.ps1` préparent un aperçu Windows avec outils locaux, compilation séquentielle limitée et données distinctes sous `.artifacts/local-preview/data`. Le script est relu mais **n'a pas été exécuté** ; aucune autorisation d'exécuter un build ou test sur le PC n'est déduite de son écriture.
-
-## Matrice complète sur `66acf34`
-
-Une tentative de relance intermédiaire réduite a été rejetée avant création par le contrôle automatique. Après vérification de l'accord explicite déjà donné et du dépôt propre, la matrice complète a été autorisée : [40431199519](https://github.com/FluryWaana/atelier/actions/runs/40431199519). Résultat global : **échec**, livraison ignorée.
-
-| Cible native, bibliothèque atelier-app | Réussis | Échoués | Ignorés | Diagnostic réellement lu |
-| --- | --- | --- | --- | --- |
-| Windows x64 | 116 | 1 | 1 | Expiration de santé sur port libre pendant récupération |
-| Linux x64 | 118 | 5 | 1 | Descripteurs de dossiers `O_PATH` utilisés pour synchronisation/permissions |
-| Linux ARM64 | 118 | 5 | 1 | Mêmes erreurs de descripteurs, journaux ARM64 relus |
-| macOS ARM64 | 104 | 9 | 1 | Alias `/var`, SQLite NOFOLLOW et observation de processus Darwin |
-| macOS x64 | 104 | 9 | 1 | Mêmes familles, journal Intel relu |
-
-Les trois jobs navigateur refusent le fichier `.trunk-lock` laissé par Trunk dans les assets. La livraison, les autres suites arrêtées après l'échec de bibliothèque et les contrôles ultérieurs ne sont pas qualifiés par ces nombres.
-
-Correctifs candidats : listing d'assets partagé excluant uniquement le marqueur Trunk régulier vide sans lien, sans le supprimer ni le servir ; descripteur de dossier rouvert relativement au FD ancré pour `fsync` et `fchmod` ; observation Darwin par `proc_pidinfo` gardant le leader possédé non récolté ; racines temporaires physiques dédiées dans la qualification macOS et dans le helper de snapshots SQLite de production. Les validations des chemins utilisateur ne sont pas assouplies. Régressions écrites, résultats à requalifier.
-
-L'essai local manuel signalé par le propriétaire échoue également avant le lancement du serveur sur la lecture de santé d'un port libre. Une lecture OS constate l'absence de listener et de dossier de données d'aperçu : aucun contenu métier n'est consulté. Le correctif partagé prouve d'abord la disponibilité du port par une réservation noyau brève ; seul `AddrInUse` autorise la tentative HTTP. L'attente du seul enfant lancé reste bornée à vingt secondes et ne reprend que les expirations de lecture. Aucun processus étranger n'est arrêté et aucun timeout n'est assimilé à une absence.
-
-## Compilations locales désormais autorisées
-
-Le propriétaire a explicitement levé les limites de ressources et autorisé les builds sur le PC. Les tests, Clippy et scénarios automatisés locaux n'ont pas été autorisés ni exécutés. `Preview.cmd` ne limite plus les jobs, la priorité ou l'affinité CPU.
-
-Le premier build local des cibles natives détecte une visibilité insuffisante de `single_link`, corrigée en portée interne à la crate. Ensuite `cargo build --workspace --exclude atelier-ui --all-targets --locked` réussit (3 min 50 s) et `cargo check --workspace --exclude atelier-ui --all-targets --locked` réussit (1 min 01 s). Ce sont des preuves de compilation Windows, y compris des exécutables de tests compilés sans exécution. Des avertissements de copie du cache incrémental après échec de hardlink sont présents ; ils ne sont pas présentés comme des diagnostics de tests réussis.
-
-Le premier build UI dev sans symboles de débogage compile mais produit un WASM de 277 613 094 octets, inutilisable dans la borne de 64 Mio : il n'est pas qualifié. Après profil incrémental légèrement optimisé, destination dev distincte et conservation des noms Rust encodés (`data-no-demangle` de Trunk épinglé), `cargo xtask build-ui --dev` réussit avec **20 412 294 octets**, compilation UI de 2 min 27 s ; une relance sans changement est mesurée à **4,16 s**. La commande contrôle les bornes après génération. Ces chiffres n'isolent pas chaque changement et ne mesurent ni reconstruction après édition ni scénario d'utilisation. Le build release reste distinct et requis pour la livraison.
-
-La commande Rust compilée `xtask inventory --check` a également réussi localement. Aucun compte réel, appel payant, accès au `data/` utilisateur, tag, release ou déploiement n'a été utilisé pour ces vérifications.
-
-Correctifs poussés : `807b40d` (démarrage), `69890ab` (adaptateurs POSIX), `4b80a73` (assets et aperçu). Requalification complète autorisée : [40436598406](https://github.com/FluryWaana/atelier/actions/runs/40436598406) sur `4b80a73`. Résultats en attente ; les compilations locales ne remplacent aucun des parcours de cette matrice.
-
-## Résultats réels sur `4b80a73`
-
-La campagne `40436598406` se termine en **échec**, livraison ignorée. Bibliothèque atelier-app : Windows **120 réussis, 0 échoué, 2 ignorés** ; Linux x64 et ARM64 **129 réussis, 0 échoué, 2 ignorés** ; macOS x64 et ARM64 **115 réussis, 4 échoués, 2 ignorés**. Les anciens échecs des descripteurs de dossiers, chemins temporaires et démarrage sur port libre ne réapparaissent pas dans ces suites. Ces nombres ne couvrent pas les cibles suivantes arrêtées par Cargo.
-
-Les quatre échecs macOS concernent désormais `killpg` sur un groupe ne contenant que des zombies : Darwin renvoie `EPERM`. Le correctif conserve le refus pour un groupe vivant ou une inspection indisponible ; il exige une nouvelle preuve du leader zombie possédé et une inspection complète sans membre vivant. Sous Windows, la suite s'arrête ensuite sur l'association de forge : deux formes du même chemin (`\\?\` et ordinaire) étaient comparées sans normalisation commune. Sous Linux, elle s'arrête sur la sauvegarde directe pendant une création Jira ; le garde Jira existant est désormais aussi appliqué à cette frontière, avant création de fichier. Régressions conservées et renforcées, requalification requise.
-
-Chrome et Edge atteignent l'import de ticket : la carte est réellement créée, mais la désérialisation UI depuis `Value` échoue pour `Card/Document`. Le parsing depuis texte JSON corrige cette frontière sans changer l'assertion du parcours. Safari s'arrête auparavant sur la conservation d'un brouillon de forge après conflit ; la cause n'est pas encore prouvée. Le diagnostic d'échec recueille désormais uniquement les états publics synthétiques des contrôles concernés, et les captures sont conservées pour les trois plateformes. Aucun de ces parcours incomplets n'est déclaré réussi.
-
-La campagne corrective poursuit toutes les cibles Cargo avec `--no-fail-fast` afin de recueillir les échecs indépendants dans la même exécution ; le code de sortie reste en échec si une seule cible échoue. Les étapes suivantes et la livraison restent conditionnées aux contrôles réussis.
-
-Les correctifs natifs de ce lot compilent localement sous Windows avec toutes les cibles (`cargo build --workspace --exclude atelier-ui --all-targets --locked`, 3 min 12 s), sans exécution de test. Darwin reste à requalifier sur ses runners.
-
-Le contrôle de compilation UI `cargo check -p atelier-ui --target wasm32-unknown-unknown --locked` réussit également localement (25,15 s), ainsi que le formatage et le contrôle d'inventaire. Aucun parcours ni test n'est déduit de ces contrôles.
-
-## Collecte complète sur `9d787e8`
-
-[40438226602](https://github.com/FluryWaana/atelier/actions/runs/40438226602) : **échec**, livraison ignorée. L'association de forge Windows passe ses trois tests ; les gardes Jira corrigés ne réapparaissent pas comme échecs. Bibliothèque atelier-app : Windows 120 réussis/0 échoué/2 ignorés, Linux x64 et ARM64 129/0/2, macOS ARM64 118/1/2. Les tests d'observation/arrêt Darwin passent ; le test de service encore échoué exigeait un PID enfant alors que le shell macOS remplaçait son propre processus par le dernier programme. La fixture conserve désormais explicitement son shell parent.
-
-`--no-fail-fast` expose 11 cibles échouées sous Windows, 7 sur chaque Linux et 10 sur macOS ARM64. Les correctifs traitent séparément : fixtures initialisées avant leur contenu, chemins Git Windows sans préfixe étendu, vraie traversée lexicale refusée, accès synthétique des commits sous `repositories`, contrôle de persistance d'une conversation dans `brainstorms`, accès aux dépôts hors périmètre nécessitant une autorisation, export Tempo exigeant son instantané, rejet initial d'assets interdits avant toute session et isolation des tests qui partagent le résolveur borné. Les anciens vecteurs JSON restent inchangés ; les vecteurs de modification locale de texte lié à un ticket vérifient explicitement le refus du nouveau contrat et l'absence d'événement.
-
-Défauts de production corrigés dans ce lot, encore à requalifier : conservation des pipes jusqu'au nettoyage de l'enfant supervisé ; instantanés de module hachés après normalisation JSON pour ignorer uniquement l'ordre/espacement des objets ; `check-ignore` exempté du drapeau global `--literal-pathspecs` qu'il refuse, en gardant les chemins validés et les autres commandes littérales. Le [code de Git](https://github.com/git/git/blob/master/builtin/check-ignore.c) refuse cette magie via son masque de pathspec. Les hooks restent explicitement neutralisés avec `NUL` ou `/dev/null` selon la plateforme. Neuf traductions explicites manquantes sont ajoutées.
-
-Chrome/Edge passent l'import puis échouent après le rapprochement d'une transition, lors de la fermeture du dialogue ; le scénario restaure une valeur vide par WebDriver `clear`, qui ne notifie pas uniformément le modèle via `input`. La notification du champ vidé est explicite et l'absence réelle du dialogue est attendue avant navigation. Les clics attendent aussi que leur contrôle soit activé, sans contourner le clic natif ni les gardes. Safari dépasse cette fois le conflit de forge et s'arrête sur la duplication ; aucune cause unique n'est déclarée prouvée, l'attente de contrôle activé et les diagnostics d'éditeur doivent être relus. L'upload des captures est déplacé après tous les scénarios, car il précédait les étapes Linux/macOS.
-
-`cargo check --workspace --exclude atelier-ui --all-targets --locked` réussit localement sur le lot correctif (20,61 s), sans exécution. Les suites échouées et les paquets restent non qualifiés.
-
-Le journal macOS Intel confirme les mêmes dix cibles, plus un arrêt interactif non confirmé dans le délai synthétique de quinze secondes (onze cibles au total). L'ordre de nettoyage garde maintenant les lecteurs jusqu'à la tentative d'arrêt ; toute erreur d'arrêt reste propagée et la réservation conservée. Le délai et les assertions de résultat restent inchangés ; le prochain échec éventuel indiquera type/mode/statut/attention. Les bibliothèques macOS Intel et ARM64 ont chacune 118 réussites, un échec de fixture service et deux tests ignorés.
-
-Après ces dernières corrections, le contrôle natif de toutes les cibles réussit à nouveau (15,25 s). Son premier essai avait détecté un format de diagnostic `Debug` non pris en charge, corrigé dans le test avant ce succès. Le binaire local a été reconstruit (30,59 s avant le dernier changement interactif) ; le build UI dev après modification réussit en 1 min 32 s de compilation, avec un WASM de 20 409 464 octets. Aucun test, Clippy ni navigateur n'a été exécuté sur le PC.
-
-## Réduction des échecs sur `72cc77f`
-
-[40440340703](https://github.com/FluryWaana/atelier/actions/runs/40440340703) : **échec**, livraison ignorée. Bibliothèques atelier-app : Windows 120 réussis/0 échoué/2 ignorés, Linux x64 et ARM64 129/0/2, macOS x64 et ARM64 119/0/2. Les quatre suites Windows `git-push` (3 tests), `repository-access` (1), `command-runs` (1) et `extensions` (4) passent réellement. Jira, Tempo, l'édition des cartes liées et les traductions passent dans les suites Linux relues.
-
-Il reste deux cibles natives échouées par Linux (`worktrees`, `connector-repositories`), deux sous Windows (`local-commit`, `connector-repositories`), trois sous macOS ARM64 et quatre sous Intel (les deux cibles Linux, `agent-account`, puis `interactive-runs` sur Intel). Correctifs candidats : retrait non récursif des liens de dossier par `remove_file` sous Unix ; comparaison des deux chemins physiques Git sous Windows ; projection de publication excluant uniquement la colonne encore possédée par un workflow Running/Waiting, avec régression conservant la détection des éditions humaines. Les comptes et la session malformée macOS exposent encore une course EPERM pendant la sortie spontanée : observation bornée de la transition vers le leader zombie vérifié et le groupe vide, sans renvoyer le signal ; le délai global d'arrêt reste dix secondes. Régression de seize sorties spontanées écrite, non exécutée.
-
-Chrome/Edge franchissent désormais l'import et la transition puis s'arrêtent sur le rapprochement du temps. Sa cause reste **non prouvée** : le diagnostic de timeout est étendu aux erreurs et états publics des journaux. Un scénario natif supplémentaire réutilise le faux module compilé pour TimeSend perdu → TimeReconcile, avec UUID synthétiques, états sending/uncertain/exported et unicité/contenu/date du marqueur ; il est écrit, pas encore exécuté. Safari franchit la duplication puis reçoit un refus explicite d'admission concurrente en créant un projet doublon. Le scénario vérifie le brouillon et l'absence de projet créé avant au plus un second clic utilisateur ; la vérification finale du refus de doublon reste obligatoire. Aucune écriture ambiguë n'est rejouée.
-
-Les captures macOS sont maintenant réellement conservées et relues. Firefox et les contrôles WASM indépendants seront poursuivis même après une étape précédente en échec, hors annulation ; leurs erreurs conserveront le statut global en échec. Les probes natifs ultérieurs et les paquets restent conditionnés aux prérequis réussis. Le lot correctif compile sous Windows avec toutes les cibles (20,96 s), sans exécution de test. Le binaire local du commit précédent a également été reconstruit avec succès (26,39 s).
-
-## Résultats sur `2099e64`
-
-[40442078627](https://github.com/FluryWaana/atelier/actions/runs/40442078627) : **échec**, livraison explicitement ignorée. Bibliothèques atelier-app : Windows/macOS x64/macOS ARM64 **122 réussis, 0 échoué, 2 ignorés** ; Linux x64/ARM64 **131/0/2**. Sous Windows, toutes les cibles du workspace passent, puis Clippy/check WASM, les deux parcours TLS natifs, l'isolation DPAPI entre comptes jetables et le tray explicitement invoqué passent. Le sélecteur d'import échoue avant confirmation sur le chemin source affiché ; aucun transfert n'est confirmé dans ce cas. Les fixtures utilisent maintenant les noms physiques Windows longs, et l'assertion conserve le chemin attendu et le texte exact observé ; le résultat reste à requalifier.
-
-Sous POSIX, seule `connector-repositories` échoue dans le workspace. La cause précise est la validation d'un UUID de workflow avec la grammaire des identifiants de modules : un UUID commençant par un chiffre était rejeté. Validation UUID canonique dédiée et régression ajoutées, sans modifier la grammaire des modules. Les comptes, interactions et seize courses de sortie spontanée Darwin passent réellement sur les deux macOS. Clippy/check WASM et le scénario natif TimeSend perdu → TimeReconcile passent dans les journaux Linux relus ; ce dernier passe également sous Windows.
-
-Chrome et Firefox échouent encore dans le rapprochement de temps, avec un diagnostic désormais précis : le middleware traduit les opérations du module en portée « projets », puis le garde des exports de temps bloque la relecture de son propre état incertain. Le correctif candidat reconnaît uniquement la route exacte de rapprochement d'une intention TimeSend persistante encore Uncertain, dans son module et son identifiant ; seul le garde Tempo reçoit alors la route réelle. Les autres gardes, nouveaux envois, autres modules et phases terminales restent protégés. Le scénario natif est renforcé sur ces frontières ; le parcours HTTP/navigateur doit encore confirmer le correctif.
-
-Safari reçoit un HTTP 409 pendant la modification externe synthétique du scénario de conflit ; sa cause n'est pas encore établie. Le corps du refus et les unités UTF-16 bornées de la description actuelle seront conservés, sans changer l'instantané attendu ni normaliser le texte. Edge échoue cette fois dès la navigation initiale ; l'erreur WebDriver sera conservée avec la session masquée, au lieu du message générique qui empêchait son diagnostic. Aucun de ces échecs n'est déclaré résolu. Le lot complet compile localement sous Windows, toutes cibles comprises (28,74 s), avec formatage propre, sans test/Clippy/navigateur local.
-
-## Windows natif réussi sur `367eea3`
-
-[40467711750](https://github.com/FluryWaana/atelier/actions/runs/40467711750) : **échec global**, livraison ignorée. Le job natif Windows est entièrement réussi, y compris le sélecteur d'import explicitement exécuté (1,27 s), ses deux chemins stricts, annulation et copie synthétique. Les tests ordinaires natifs et les contrôles WASM passent sur les cinq cibles. Les deux scénarios HTTPS Jira→temps→Tempo passent sous Linux et sur les deux macOS. Le scénario forge HTTPS atteint maintenant sa lecture de branche puis échoue sur POSIX ; les probes keyring/tray suivants n'y sont pas atteints.
-
-Le transport synthétique imposait OpenSSL à Git Ubuntu, qui utilise GnuTLS : il conserve désormais son backend Linux et son autorité PEM explicite, son dossier d'autorités vide et la vérification TLS. Windows/macOS gardent OpenSSL explicite. Cela n'explique pas à lui seul l'échec macOS ; le diagnostic synthétique classe désormais l'erreur Git dans des messages fixes, sans stderr brut, URL ni identifiant. Régressions d'arguments, de confiance et de non-divulgation écrites, requalification restante.
-
-Le rapprochement de temps n'est plus l'arrêt des parcours Linux. Chrome et Firefox atteignent ensuite le scénario d'explorateur : le test attendait encore 403 pour une session absente, alors que le contrat actif renvoie 401. L'assertion exige désormais 401 et son diagnostic de session ; aucune lecture non autorisée n'est acceptée. Safari conserve bien le brouillon après conflit, mais reçoit par intermittence le refus d'admission « Une modification est en cours ». Source identifiée : le worker réservait le verrou exclusif toutes les 500 ms même avec une file vide ou un workflow attendant une décision. Un indice SQLite en lecture seule évite ces réservations sans travail ; tout avancement reste revalidé sous le verrou existant. Régressions file vide/en pause/active et workflow Waiting/Ready ajoutées. Les erreurs de l'indice repassent par le traitement autoritaire existant ; elles ne deviennent pas une preuve d'inactivité.
-
-Edge avance cette fois jusqu'aux réglages et rencontre un autre refus HTTP auparavant réduit au seul statut. Les réponses positives attendues des parcours navigateur utilisent maintenant un diagnostic commun conservant uniquement route, statut et erreur JSON publique bornée, jamais en-têtes ou query string. Le prochain résultat doit confirmer la correction des conflits d'admission et préciser tout autre refus ; aucun parcours navigateur ni paquet n'est déclaré réussi. Le contrôle natif local de toutes les cibles, le formatage et l'inventaire passent ; aucun test local n'a été exécuté.
-
-## État réel sur `a364add`
-
-[40470039650](https://github.com/FluryWaana/atelier/actions/runs/40470039650) se termine en **échec global**, livraison ignorée. Le job natif Windows est entièrement réussi. Les tests ordinaires, Clippy natif et les contrôles WASM passent sur les cinq cibles. Sous Linux x64 et ARM64, le parcours forge HTTPS corrigé passe, ainsi que les contrôles de coffre ; le dernier scénario tray échoue sur Ouvrir après 15,45 s. Le correctif conserve le contexte bureau/XDG du helper et configure une vraie activation XFCE dans la session CI jetable. L’expiration reste un refus, sans tuer le navigateur externe ; son résultat reste à requalifier.
-
-Sur les deux macOS, forge HTTPS échoue encore sur la vérification du certificat ou de son autorité ; les étapes keyring/tray suivantes ne sont pas atteintes. Le diagnostic distingue désormais les causes fixes chargement/nom/dates/autorité, sans stderr brut ni assouplissement de confiance. Aucune cause plus précise n’est déclarée établie avant la prochaine exécution.
-
-Edge subit un débordement de pile dans le runner après l’ajout du diagnostic HTTP asynchrone ; ces futures répétées sont désormais allouées sur le tas. Safari atteint la création de worktree, mais le client métier réutilisait par erreur le délai de deux secondes de disponibilité WebDriver : les deux clients ont maintenant des délais distincts et bornés, sans retry implicite. Chrome/Firefox atteignent l’explorateur puis expirent sur un contrôle indisponible ; le prochain diagnostic conservera son sélecteur et les états publics des contrôles de fichiers. Aucun parcours navigateur ni paquet n’est qualifié.
-
-Le lot correctif compile localement sous Windows, toutes cibles natives comprises (`cargo check --workspace --exclude atelier-ui --all-targets --locked`, 15,32 s). Aucun test, Clippy ou navigateur local n’a été exécuté. Formatage et inventaire sont contrôlés séparément ; la compilation seule ne valide aucun scénario.
-
-## Résultats sur `14eb94f`
-
-[40472724274](https://github.com/FluryWaana/atelier/actions/runs/40472724274) : **échec global**, livraison ignorée. Les jobs natifs Windows et Linux x64 sont entièrement réussis ; sous Linux x64, les vraies actions DBusMenu Ouvrir/Quitter passent. Linux ARM64 passe les suites natives/WASM/TLS/coffre mais s'arrête avant le tray faute de `xdg-mime` sur son image minimale : `xdg-utils` est désormais un prérequis CI explicite, déjà déclaré comme dépendance des paquets Linux. Les deux macOS échouent uniquement au scénario forge HTTPS, avec le diagnostic « autorité non rattachée au CA explicite » ; les contrôles suivants y restent ignorés.
-
-Edge et Safari dépassent leurs anciens blocages puis exposent une lecture trop précoce du journal après le clic de préparation de publication. Le scénario attend désormais la confirmation UI de préparation avant la lecture, sans changer son assertion persistante. Firefox atteint l'explorateur et prouve le bouton Suivant désactivé malgré 209 fichiers chargés. L'expansion réelle de `view!` révèle que le `>=` non encadré fermait le tag : la valeur disabled devenait l'entier 200 et le handler de clic du texte. Les cinq occurrences démontrées dans fichiers, commits, journal distant et contrôles/reviewers sont encadrées ; l'expansion corrigée contient bien comparaisons booléennes et handlers. Cette vérification de génération n'est pas une réussite de parcours navigateur.
-
-Correctifs poussés : `d782eb4` (pagination et attente de publication), `a003da5` (prérequis ARM et contrôles TLS synthétiques). Le scénario forge macOS vérifiera aussi chaîne, usage serveur et IP via l'OpenSSL Homebrew utilisé par curl, avec uniquement les autorités synthétiques explicites ; le transport vérifiera la sélection Git URL-scoped des chemins CA. Aucune confiance système ni vérification TLS n'est relâchée. Contrôles de compilation natifs/WASM et formatage réussis localement, aucun test/Clippy/navigateur local exécuté. Les paquets et les parcours navigateur complets restent non qualifiés.
-
-## Résultats sur `cdbcf40`
-
-[40476025559](https://github.com/FluryWaana/atelier/actions/runs/40476025559) : **échec global**, livraison ignorée. Windows, Linux x64 et Linux ARM64 réussissent leurs jobs natifs complets. Les deux vrais parcours Linux Open→Quit passent (ARM : 2 tests réussis en 0,44 s) ; Windows réussit aussi son import graphique explicite (0,86 s). Les corrections de pagination et de préparation permettent à Edge/Chrome/Firefox de dépasser l'explorateur et la publication par module ; ils échouent ensuite sur l'attente des états/journaux des deux services Front/Back. La capture montre le Front actif avec port, mais ne prouve pas l'état du Back ni la présence du marqueur de journal : un diagnostic ciblé conserve ces valeurs et les erreurs publiques, sans imprimer les journaux. Aucune cause produit n'est encore affirmée.
-
-Safari s'arrête en envoyant Échap au select natif des agents dans les réglages. Le scénario utilise désormais le bouton Fermer comme cible du vrai événement clavier ; fermeture et retour de focus restent exigés. L'état de sauvegarde/confirmation d'abandon sera conservé si le dialogue reste ouvert. Ce changement ne qualifie pas encore Safari.
-
-macOS ARM64 échoue exceptionnellement dans `keyring-execution`, à l'écho synthétique attendant EOF : délai de production de 15 s dépassé. L'équivalent Intel passe. Aucune cause statique n'est démontrée, aucun délai augmenté ni test retiré. Sur Intel, la vérification OpenSSL échoue avant Git : le certificat produit par LibreSSL n'est pas accepté par le backend qualifié. La factory macOS utilise désormais le même OpenSSL Homebrew que curl/Git ; le contrôle positif strict CA/usage/IP reste en place, avec seul code numérique de certificat en diagnostic. Le contrôle Git get-urlmatch, devenu inutile après cette preuve préalable, est retiré. Aucun changement des autorités système ou du transport TLS de production.
-
-L'interface dev locale a été reconstruite avec succès après les corrections de pagination (compilation UI 1 min 59 s). Ce build n'est pas une preuve navigateur. Aucun test, Clippy, scénario local, tag, release ou accès aux données utilisateur.
-
-## Résultats sur `ae91dbb`
-
-[40478989925](https://github.com/FluryWaana/atelier/actions/runs/40478989925) : **échec global**, livraison ignorée. Windows, Linux ARM64 et les deux macOS réussissent leurs jobs natifs complets. La factory OpenSSL Homebrew corrige les scénarios forge TLS sur les deux architectures Mac ; chaînes/nom/usage restent vérifiés. Les contrôles keyring avec comptes isolés, refus réciproques et trousseaux dédiés passent, ainsi que présence/retrait AppKit sur EOF. Ce dernier ne prouve toujours pas les clics macOS Ouvrir/Quitter. L'écho keyring ARM, échoué à la campagne précédente, passe sans hausse de délai.
-
-Linux x64 échoue uniquement dans la création du worktree de dépendances (`worktrees:473`) avec `ParseIntError::PosOverflow`. Aucun nombre exact n'est encore connu. Le parseur d'inspection des processus conserve ses types et refus stricts ; son erreur distingue maintenant PID/PGID et affiche uniquement un nombre signé borné, jamais une ligne de commande ou du texte étranger. Régression de débordement et non-divulgation écrite, non exécutée ; aucune cause numérique précise n'est inventée.
-
-Chrome et Firefox montrent deux services actifs, chacun avec le marqueur de démarrage et sans erreur : l'assertion inspectait aussi les journaux de runs portant la même classe CSS. Elle est ciblée sur les deux `.service-state`, en conservant état actif et marqueur pour chacun. Safari ferme réellement les réglages mais perd le focus ; restauration explicite vers Paramètres au prochain frame, réutilisant le modèle de l'éditeur. Son assertion de fermeture/focus reste identique.
-
-L'ajout du diagnostic fait de nouveau dépasser la pile du runner Edge. Les attentes WebDriver répétées sont maintenant boxées à leur frontière, sans augmenter la pile système ; la compilation avec relevé de types constate une future `ui::test` de 5 800 octets et `ui::scenario` de 5 360 octets après ce changement. Ce relevé n'est pas une mesure de pile d'exécution. Les parcours application, Jira et mises à jour possèdent déjà leurs propres données/serveurs : le runner poursuit désormais ces trois parcours indépendants, conserve une capture distincte et tous les échecs, avec statut global échoué si un seul échoue. Aucun parcours incomplet n'est déclaré réussi.
-
-Contrôle WASM local réussi (2,33 s), contrôle natif de toutes les cibles réussi (41,91 s après reconstruction des macros), puis compilation du runner révisé réussie (4,29 s), formatage propre. Aucun test, Clippy ou navigateur n'a été exécuté localement. Aucun paquet réel n'est encore qualifié.
-
-## Cinq jobs natifs réussis sur `654f066`
-
-[40481745917](https://github.com/FluryWaana/atelier/actions/runs/40481745917) : les cinq jobs natifs complets réussissent réellement sous Windows x64, Linux x64/ARM64 et macOS x64/ARM64, journaux relus. Le dépassement numérique Linux ne se reproduit pas ; sa cause reste inconnue et aucun assouplissement du parseur n'a été introduit. Le statut global reste en **échec** sur les navigateurs ; livraison ignorée.
-
-La collecte indépendante expose trois arrêts par navigateur. Sous Windows, la requête HTTP au service synthétique échoue : le listener est non bloquant et Winsock transmet ce mode au flux accepté ; Rust std ne le réinitialise pas. La fixture fixe explicitement le mode bloquant avant ses timeouts, sans retry ni délai ajouté ([accept Winsock](https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-accept)). Sous Chrome/Firefox, les réponses HTTP passent mais la relance individuelle échoue sur l'ancien port indisponible après arrêt. Le runtime réserve désormais un nouveau port automatique ; un port configuré reste exact, avec refus s'il est occupé. Régression conservant le voisin et un listener extérieur écrite, non exécutée.
-
-Safari réussit la fermeture/focus des réglages puis expose la même absence de restauration dans Sauvegardes. Elle est corrigée, ainsi que l'omission identique dans Projets avec assertion de focus supplémentaire. Le parcours Jira/Tempo attendait l'erreur de la mauvaise saisie à cause de l'ordre décroissant SQLite ; les deux attentes ciblent désormais leurs UUID, en conservant refus de jeton et protection du brouillon. Les effacements seuls de champs notifient explicitement input, comme le scénario du tableau le faisait déjà ; les assertions métier restent en place.
-
-Le parcours de mise à jour atteint la génération d'avis puis refuse une archive Cargo sans texte de licence. L'inventaire local léger recense 45 archives concernées ; les compléments statiques officiels sont liés à nom/version/déclaration/dépôt/révision/checksum et SHA256 des textes. Six révisions Leptos indisponibles ont une provenance alternative explicitement documentée ; aucun copyright ni année n'est inventé. La déclaration du SQLite embarqué complète sa licence wrapper ; AWS-LC, fiat et ring ont leurs textes récursifs recensés. Génération hors ligne, source exacte liée pour chaque composant, inconnus toujours refusés et octets conservés par Git sans conversion de fins de ligne. Ce relevé de déclarations n'est pas une certification juridique ni une réussite de paquet.
-
-Le lot complet compile localement : contrôle natif toutes cibles 17,60 s après le correctif des ports, contrôle WASM réussi, formatage et inventaire de 412 fichiers vérifiés. Aucun test, Clippy, navigateur ou paquet n'a été exécuté sur le PC. Les nouveaux correctifs, le générateur réel et les paquets restent à requalifier sur la campagne suivante.
-
-## Collecte indépendante sur `1f0d89a`
-
-[40486133056](https://github.com/FluryWaana/atelier/actions/runs/40486133056) : **échec global**, livraison ignorée. Windows, les deux Linux et macOS Intel réussissent leurs jobs natifs complets. macOS ARM échoue uniquement à la réouverture d'un port dans le test d'exclusivité ; les trois régressions d'avis de licences y passent réellement, comme dans les suites réussies. La socket concurrente refusée est désormais fermée avant la phase de libération et les réouvertures utilisent le même bind privé pour conserver l'erreur système exacte. Assertions d'unicité/loopback/exclusivité/réouverture intactes, aucun retry ni changement de politique produit ; la cause précise du refus ARM reste inconnue.
-
-Les quatre navigateurs dépassent les services puis attendent le mauvais élément code pour le journal d'une commande : un contexte de review caché précède le journal. Le sélecteur vise maintenant `pre.service-log > code`, en conservant statut terminé, texte Unicode et absence d'exécution du texte HTML. Le parcours Jira atteint la concurrence du batch, mais son édition de description liée à un ticket est interdite par le contrat actif. Le scénario exige explicitement ce 409 sans mutation, puis modifie les instructions locales autorisées ; il vérifie leur conservation et le refus d'un aperçu devenu obsolète. Aucun assouplissement du contrat des tickets.
-
-Les avis, archives signées et préparation de mise à jour sont réellement atteints sous Edge/Safari. Le rollback renouvelle la session, mais goto vers le même document avec un nouveau fragment conserve l'ancienne page et son dialogue : Edge donne précisément un clic intercepté par settings-dialog. Le scénario rouvre un nouveau document avant de vérifier la récupération, sans changer les assertions. Les erreurs d'étapes sont bornées et masquent les deux sessions ; seule la phase publique du journal est affichée avant nettoyage en cas d'échec.
-
-Linux refuse un fichier trop volumineux lors du staging de cette fixture de mise à jour, cohérent avec son binaire debug contenant DWARF. La construction interne du seul binaire de serveur navigateur utilise maintenant CARGO_PROFILE_DEV_DEBUG=0, sans changer le profil utilisateur ni la borne de 128 Mio des paquets. Le prochain journal donnera les tailles publiques binaire/avis avant staging ; la cause n'est pas présentée comme une mesure déjà obtenue. Aucun paquet de livraison ni parcours navigateur complet n'est encore qualifié.
-
-Le lot correctif compile localement avec toutes les cibles natives (17,93 s), puis le runner révisé (4,29 s), formatage et inventaire vérifiés. Aucun test, Clippy ou navigateur local exécuté.
-
-## Rollback navigateur réussi sur `ee3122b`
-
-[40489418512](https://github.com/FluryWaana/atelier/actions/runs/40489418512) : parcours synthétique updates **réussi sur Edge, Chrome, Firefox et Safari**, journaux relus. Avis 3 602 256 octets ; binaires Linux 71 770 904, Windows 32 832 512 et macOS 61 087 552 octets, tous sous la borne inchangée de 128 Mio. Vraies archives signées, préparation/application provoquant le rollback attendu, rotation de session, nouveau document et réglage conservé sont vérifiés. Cela ne qualifie ni une mise à niveau réussie vers une nouvelle version réellement construite ni les installeurs du job delivery.
-
-Windows, Linux ARM64 et les deux macOS réussissent leurs jobs natifs complets. Le test de réouverture de port Mac passe après fermeture du socket concurrent, sans retry ; aucune défaillance de production n'est déclarée résolue par ce seul changement de test. Le dernier job Linux x64 attendait depuis plus de 25 minutes les prérequis, sans compilation ni test. Les logs après annulation montrent les téléchargements très lents de WebKit/polices via azure.archive.ubuntu.com. La campagne, déjà échouée sur les navigateurs avec tous leurs diagnostics collectés, est annulée pour arrêter cette dépense : Linux x64 reste explicitement non exécuté sur ce commit. Les échecs navigateur sont conservés ; delivery reste ignoré.
-
-Le parcours application expose la route CLI de mise à jour disponible uniquement sous Windows : après arrêt des services, les corps invalides restent 400 sous Windows, l'absence de route POSIX reste 404 ; leurs gardes 409 pendant les services restent vérifiés. Edge atteint ensuite le commit local mais son attente renvoyait un élément DOM, pas true. Trois attentes identiques (commit/profils) sont rendues explicitement booléennes, sans élargir wait_dom ni réduire leurs conditions. Le batch Jira semé directement en base n'avait pas d'agent ; ses deux cartes ont maintenant le fournisseur intégré codex avant création de leurs snapshots. Cette validation n'exécute aucun agent réel et aucun garde produit n'est réduit.
-
-Ces correctifs sont poussés à `737b763`, compilation du runner réussie (2,19 s), formatage et inventaire vérifiés, aucun test local exécuté. La fixture de bureau Linux choisira Chrome s'il est déjà présent, Epiphany sinon, avec associations HTML/http/https vérifiées et mêmes vrais scénarios Open/Quit. Cela évite le téléchargement inutile d'Epiphany sur le runner x64 ; ce choix de fixture reste candidat jusqu'à son exécution.
-
-## Diagnostic de la campagne du 31 octobre 2026
-
-La campagne complète [41152530615](https://github.com/FluryWaana/atelier/actions/runs/41152530615), au commit `d9fbf3c`, est terminée en échec. La sélection, la compilation WASM et le job natif Windows ont réussi. Douze jobs échouent, avec plusieurs messages issus des mêmes causes.
-
-| Cause établie | Conséquence et correction |
+| Input | Values |
 | --- | --- |
-| Une variable mutable seulement sous Windows est compilée aussi sous Unix | Les quatre jobs natifs Linux et macOS s'arrêtent à Clippy. La construction des noms Windows est maintenant conditionnée à la compilation Windows. |
-| Les conversations créées via `/api/brainstorms` sont recherchées dans `cards` | Les quatre livraisons Unix signalent une perte de conversation. Les assertions utilisent maintenant `brainstorms`. Les trois contrôles Rust de mise à jour et le contrôle DEB/RPM avaient la même erreur. Aucun changement du contrat API ni du stockage. |
-| Le parcours appelle la route de mise à jour CLI Windows sur Unix | Chrome, Firefox et Safari confondent HTTP 404 et acceptation d'une opération destructive. Ce contrôle est réservé à Windows. Les autres gardes restent vérifiés sur toutes les plateformes. |
-| Le lanceur Windows termine mais son serveur conserve les handles des pipes | La livraison Windows échoue avec `Elapsed(())`. Reproduction sur un paquet portable synthétique local : fin du processus en environ 5 secondes, pipes encore ouverts 2 secondes plus tard, fermeture après arrêt du serveur. Le runner attend maintenant le statut du processus, sans collecte de pipes. La limite de 40 secondes reste inchangée et les erreurs restent visibles. |
-| Le parcours prépare un worktree pendant les diagnostics de l'éditeur | Edge reçoit HTTP 409 avant la création du worktree. La préparation précède maintenant l'ouverture de l'éditeur. Aucun retry ni assouplissement du verrou. |
-| Le clic de mise en file peut utiliser un instantané antérieur à une modification HTTP | Chrome attend ensuite une file restée vide. Le parcours recharge la tâche et vérifie le nouveau profil avant le clic. Cette cause de concurrence est déduite du code et du journal, sans preuve d'un défaut de la file. |
-| Safari saisit un auteur incomplet avant la vérification du brouillon | La capture montre `ynthetic author` et un message intact. Le parcours clique explicitement le champ avant la saisie. Ce correctif reste à vérifier sous Safari. |
+| `scope` | `browser`, `delivery`, `native`, `desktop`, `full` |
+| `browser` | `chrome`, `firefox`, `edge`, `safari`, `all` |
+| `journey` | `jira`, `application`, `updates`, `all` |
+| `platform` | `windows`, `linux`, `linux-arm`, `macos`, `macos-intel`, `all` |
 
-Les échecs d'upload des paquets absents sont des conséquences des arrêts précédents. Ils ne prouvent pas un défaut supplémentaire de publication. Les logs, captures et reproductions restent dans `.artifacts/ci-diagnosis`, hors Git.
+Defaults select one browser journey. `desktop` selects Windows Setup and Safari on macOS 26. Native macOS targets use macOS 15 ARM and Intel. `full` with `platform=all` selects all five native targets and the browser matrix. `full_matrix=true` also overrides the platform selection to all five targets.
 
-La reproduction locale a aussi montré que le serveur navigateur héritait du PATH et du dossier personnel. Les diagnostics automatiques pouvaient découvrir des CLI installées et concurrencer les opérations du parcours. Le serveur de test utilise désormais un environnement limité, des dossiers de configuration synthétiques et un PATH filtré des répertoires contenant les agents connus. Un test vérifie ce filtrage. Les refus temporaires observés avant cette isolation ne sont pas présentés comme des régressions fonctionnelles corrigées.
-
-Vérifications locales obtenues après correction : 30 tests HTTP `prototype`, dont une nouvelle création de conversation suivie d'un arrêt et redémarrage avec renouvellement de session, 13 tests unitaires du runner et parcours réels Edge `application` et `jira` avec les assets exacts de cette CI. Les premiers essais avec des assets locaux anciens, puis avec l'environnement non isolé, ont échoué et ne sont pas des qualifications.
-
-Aucune nouvelle CI lancée pendant ce diagnostic. Les quatre contrôles natifs Unix, les livraisons corrigées, Safari et Chrome restent à requalifier. Les installateurs et les mises à jour ne sont pas déclarés qualifiés par les seuls parcours Edge application et Jira.
-
-La suite complète `cargo test --workspace --exclude atelier-ui --locked` a ensuite réussi localement : 443 tests passés et 7 ignorés. Les tests ignorés restent non qualifiés. `cargo fmt --all -- --check`, Clippy natif, Clippy WASM, check WASM et `bash -n xtask/packaging/qualify-linux.sh` ont réussi. Les tests temporaires refusés dans la sandbox ont été réexécutés hors sandbox avant ces résultats.
-
-Le contrôle supplémentaire Edge `updates` a exposé un second lancement du serveur, spécifique au paquet installé, qui héritait encore de l'environnement personnel. La capture montre un refus temporaire de mutation et un journal resté `Prepared`, avant toute activation. Le même lancement `serve` avec environnement synthétique est maintenant utilisé pour ce paquet. Ce parcours ne remplace pas la qualification du lanceur CLI, des installateurs ou des mises à jour natives avec une nouvelle version compilée.
-
-Le dernier parcours réel Edge `updates` a réussi après ce raccordement, avec les assets de la campagne initiale. Les parcours Edge `application`, `jira` et `updates` ont donc chacun réussi en sélection locale explicite. Clippy et les 13 tests unitaires du runner ont également réussi après le raccordement. Aucun résultat Safari, Chrome ou livraison native corrigée n'est déduit de ces succès.
-
-## Résultats de la relance du 31 octobre 2026
-
-La campagne [41156202234](https://github.com/FluryWaana/atelier/actions/runs/41156202234) exécute bien `13cd351`. Le job natif Windows et les parcours complets Chrome, Firefox et Safari ont réussi. Les échecs restants ne sont donc pas identiques à ceux de la campagne précédente.
-
-Les quatre jobs natifs Unix échouent encore dans `agent_diagnostics.rs`. La correction précédente a supprimé `unused_mut`, mais introduit `clippy::useless_vec` pour le cas Unix. Les contrôles Windows n'avaient pas détecté ce défaut. Unix utilise désormais un tableau à un élément, Windows garde son vecteur de noms possibles. La branche Unix reste non compilée localement. Ubuntu WSL ne dispose ni de Rust ni de compilateur C et demande une authentification pour ses prérequis. Le moteur Docker local est indisponible.
-
-Les journaux des livraisons Linux x64 et ARM, macOS ARM et Windows montrent que la persistance et la compilation du successeur ont passé. Le staging échoue ensuite car `next_binary` renomme le binaire en `next-atelier`, alors que `package::stage` exige `atelier` ou `atelier.exe`. Le successeur conserve maintenant son nom dans un dossier `successor-bin` distinct. Le contrôle strict du staging est conservé. Une préparation locale avec un vrai binaire dans ce dossier a réussi. Ce contrôle ne qualifie pas l'ensemble des installateurs ni la nouvelle version native.
-
-Edge passe les parcours application, diagnostics et updates. Le parcours Jira échoue plus loin, avant la vérification des sources, sur un bouton `start-verification` désactivé. Le journal et la capture disponibles ne suffisent pas à établir lequel des gardes le désactive. Une nouvelle exécution locale ciblée Edge/Jira a réussi. Cet échec CI reste ouvert, sans délai augmenté ni nouvelle tentative automatique. En cas de nouvel échec, le parcours fournira aussi l'état synthétique de la carte, des projets et des contrôles concernés.
-
-Après ces modifications : formatage, Clippy Windows, 13 tests unitaires du runner, 6 tests synthétiques de découverte des exécutables et préparation locale du staging réussis. Aucune autre CI lancée. Les corrections de nommage et de lint ne sont pas présentées comme qualifiées sur les plateformes distantes.
-
-## Corrections locales après collecte complète des deux campagnes
-
-Les 30 journaux de jobs des campagnes `41152530615` et `41156202234`, avec leurs métadonnées, sont récupérés dans `.artifacts/ci-diagnosis/all`. Aucune CI supplémentaire n'est lancée. Les erreurs de lint Unix, de collection des conversations, de pipes du lanceur, de nom du successeur et des parcours navigateur décrites ci-dessus sont corrigées. Les messages d'artefacts absents restent identifiés comme conséquences des arrêts de qualification.
-
-Le dernier blocage Edge est reproduit avant correction avec Edge **155.0.4283.62**, version exacte de la campagne, et un dossier temporaire Windows exprimé avec ses alias courts 8.3. Le projet injecté directement en base conserve cet alias, alors que la conversion de conversation normalise le dépôt de la tâche. La comparaison ne retrouve donc pas la commande de vérification du projet et désactive le bouton. La fixture passe maintenant par `CreationContext::repository`, comme la frontière applicative. Le parcours exige aussi que le projet et la tâche convertie désignent le même dépôt normalisé. Aucun garde produit ni délai n'est assoupli.
-
-Le même cas réussit après correction, puis les quatre parcours complets `application`, `diagnostics`, `jira` et `updates` réussissent ensemble avec Edge 155, les assets exacts de la campagne et le dossier temporaire court. Le runner accepte un binaire navigateur explicite pour reproduire cette version sans remplacer le navigateur installé. Les traces temporaires de diagnostic ont été retirées du code.
-
-Une chaîne Rust Linux 1.99.1 et ses prérequis sont disponibles localement sous WSL. Cela remplace la limitation d'environnement relevée dans la section précédente. Le contrôle réel révèle aussi des parenthèses inutiles dans `posix-runtime.rs`, corrigées, et une assertion concurrente de réattribution immédiate d'un port éphémère. Un autre test peut reprendre ce numéro dès sa libération. Le test conserve l'unicité, le loopback et l'exclusivité des réservations vivantes, sans imposer la réattribution du même numéro. Le comportement de production des ports ne change pas.
-
-Vérifications finales locales :
-
-| Contrôle | Résultat réel |
-| --- | --- |
-| `cargo fmt --all -- --check` et `git diff --check` | Réussite |
-| Clippy natif, workspace hors UI, toutes cibles, dépendances verrouillées et warnings de code refusés | Réussite Windows et Linux x64 |
-| Clippy et check `atelier-ui` pour `wasm32-unknown-unknown` | Réussite |
-| Suite native complète Windows | 443 passés, 0 échec, 8 ignorés |
-| Suite native complète Linux x64 | 437 passés, 0 échec, 8 ignorés |
-| Edge 155, quatre parcours réels et données synthétiques, alias court Windows | Réussite |
-
-Un nouveau test lent compile réellement la version suivante, vérifie sa version à l'exécution, construit et vérifie son archive, puis lance le serveur par le helper CLI réel avant de contrôler sa santé authentifiée et de l'arrêter. Il détecte les deux régressions du nom du successeur et des pipes hérités. Ignoré dans la suite ordinaire à cause de cette seconde compilation, il est exécuté explicitement et réussit sous Windows et Linux x64. Les autres tests ignorés et les sondes natives protégées restent non qualifiés. Les tests Linux utilisent un HOME, un XDG et un trousseau jetables dans une session D-Bus isolée, sans activer les gardes CI.
-
-Les journaux complets, les reproductions avant/après et les outils locaux restent hors Git. Les avertissements locaux de copie du cache incrémental Windows concernent les liens physiques du cache et ne sont pas des lints du code. Les installeurs macOS, ARM et les qualifications natives réservées à la CI ne sont pas déclarés réussis par ces contrôles locaux.
-
-## Sonde de coffre de la campagne `41202856265`
-
-La campagne au commit `d050bc4` présente trois échecs natifs, sur Linux x64, Linux ARM et macOS ARM. Les trois journaux donnent la même assertion : `Un prototype a déchiffré le coffre d'un autre.` Les suites natives ordinaires, Clippy, WASM et les parcours TLS de ces jobs ont réussi avant cette sonde. Les navigateurs et livraisons ont été annulés avant qualification. Les erreurs d'upload des paquets absents suivent cette annulation.
-
-L'assertion de `test_prototype_vaults` utilisait le succès de `settings::public_config` comme preuve de déchiffrement. Ce contrat conserve pourtant les réglages locaux lisibles lorsque le coffre est indisponible, avec `credentialError` et les indicateurs de jetons à `null`. Le message de la sonde ne prouve donc pas un déchiffrement entre prototypes. Le bilan précédent était trop large concernant les sondes natives non exécutées localement.
-
-La sonde vérifie maintenant directement le refus cryptographique par le second service, puis exige l'erreur publique exacte, les trois indicateurs inconnus et le contenu chiffré inchangé. Elle restaure ensuite le coffre propre du second prototype et contrôle sa relecture. Aucun changement de chiffrement ni de comportement produit. La sonde native complète corrigée réussit localement sous Linux x64 dans un HOME, XDG, trousseau et D-Bus jetables, sans verrouillage de collection ni création de compte. Aucune nouvelle CI lancée. Cette exécution locale ne qualifie pas macOS ni ARM.
-
-## Échecs restants de la campagne `41206384302`
-
-La campagne complète sur `235ca03` est terminée en échec. Les jobs natifs Windows, macOS ARM et macOS Intel ont réussi, y compris leurs sondes de coffre. Les parcours Edge, Chrome et Firefox ont réussi. Les journaux des huit jobs échoués sont conservés dans `.artifacts/ci-diagnosis/all/41206384302`. Aucun nouveau workflow n'est lancé pendant leur diagnostic.
-
-| Cause observée | Correction et preuve locale |
-| --- | --- |
-| Les quatre livraisons Unix atteignent la publication, puis refusent un staging imbriqué dans le dossier de travail | Le dossier final temporaire est maintenant voisin de la destination. La publication atomique et son refus d'écrasement restent inchangés. Une régression vérifie le refus d'un staging imbriqué sans perte de son contenu, puis la publication réussie du même contenu depuis un voisin. |
-| Inno Setup refuse le préfixe de chemin Windows `\\?\` avec `Unknown filename prefix` | Les deux chemins fournis au compilateur sont normalisés après canonicalisation, y compris le cas UNC. Inno Setup officiel 6.7.1, vérifié par SHA256 et utilisé en mode portable dans `.artifacts`, reproduit exactement le refus avec ce préfixe. Le même script compile sans ce préfixe, avec un dossier synthétique contenant espaces et accent. Aucun installeur produit n'est exécuté. |
-| Les deux sondes Linux ne voient pas l'icône enregistrée dans XFCE | Le proxy D-Bus conservait `RegisteredStatusNotifierItems` en cache. XFCE annonce les changements par ses signaux dédiés. La sonde relit maintenant les propriétés sans cache. L'échec est reproduit localement avant correction dans XFCE/Xvfb/D-Bus isolés. Après correction, enregistrement, identifiant, statut, pixels et suppression passent réellement, avec les mêmes délais. |
-| Safari ne crée pas sa session WebDriver | Le journal rapporte `SessionNotCreated`, pendant la recherche ou le lancement de Safari et avant tout parcours applicatif. La cause précise reste inconnue. Aucun Mac n'est disponible localement pour la reproduire. Aucun retry, délai supplémentaire ni modification supposée correctrice n'est ajouté. Cet échec reste ouvert. |
-
-Les messages d'upload des artefacts absents suivent les échecs de fabrication. Le message `A different native OS account is required` appartient au contrôle négatif attendu de la sonde d'isolation Linux, dont l'étape réussit. Il ne constitue pas un nouvel échec.
-
-Les tests unitaires complets du runner réussissent : 15 sous Windows et 18 sous Linux, avec un test lent ignoré dans chaque suite. Les contrôles Windows sont réexécutés hors des refus de renommage de la sandbox. Clippy du runner, toutes cibles, réussit sous Windows et Linux. Le formatage est vérifié. Ces résultats, la compilation Inno synthétique et la sonde XFCE ne qualifient pas les installations DEB/RPM/Setup ni l'ensemble de la livraison. Le défaut Safari reste explicitement non résolu.
-
-## Préparation explicite de Safari et diagnostic du démarrage
-
-La version Safari de l'échec `41206384302`, 27.2 (20625.2.8.18.4), est identique à celle du parcours complet réussi de `41156202234`. Le journal ne prouve donc pas une incompatibilité de version. La cause précise du délai de découverte de `RWIApplication` reste à confirmer sur macOS.
-
-Le workflow prépare maintenant le navigateur avant la commande Rust. Dans le seul runner CI jetable, le script arrête une éventuelle instance Safari appartenant au compte courant, attend son arrêt pendant au plus dix secondes, active l'automatisation, relève la version puis lance explicitement Safari. Le démarrage du navigateur et la création de session ne sont pas retentés. Les délais WebDriver et les assertions des parcours restent inchangés. Ce correctif traite les conditions de lancement à froid et d'instance déjà ouverte. Leur rôle exact dans l'échec observé n'est pas présenté comme prouvé.
-
-Les sorties du processus WebDriver sont conservées si la création de session échoue. Safari active aussi ses diagnostics natifs. Le workflow collecte ces derniers uniquement lorsqu'un journal d'échec de création de session existe, avant toute session applicative authentifiée. Les traces ne sont pas collectées pour un simple échec ultérieur de parcours. Un échec de conservation du journal ne remplace pas l'erreur WebDriver originale.
-
-Deux tests synthétiques passent sous Linux. Ils vérifient l'arrêt d'une ancienne instance avant la configuration, un seul lancement après configuration réussie, l'absence de lancement si l'activation échoue, la propagation de son statut et le refus sur un poste non autorisé pour cette préparation CI. Tous les outils macOS de ces tests sont simulés. Syntaxe Bash, formatage et Clippy du runner sous Windows et Linux réussissent. Aucun Safari réel exécuté localement, aucune CI lancée. La réussite du parcours Safari reste à qualifier sur macOS.
-
-## Revue et vérifications répétées avant une nouvelle campagne
-
-Une première suite complète passe sous Windows avec 445 tests réussis et 8 ignorés. La suite Linux révèle un échec intermittent dans la réouverture du verrou après récupération de maintenance. Le contrôle est arrêté avant toute nouvelle campagne. Un test supplémentaire reproduit le refus de façon déterministe : un enfant créé par `fork` conserve les descripteurs ouverts et prolonge le `flock` exclusif après la fermeture du fichier par son propriétaire initial. Le test échoue avant correction avec `Le paquet Atelier est en cours de maintenance.`
-
-Le garde existant libère maintenant explicitement le verrou à sa destruction. La récupération et les deux verrous des opérations de paquet système utilisent ce même garde. Les validations, les marqueurs de maintenance et la conservation des données restent contrôlés. Les nouvelles régressions couvrent la récupération avec des descripteurs hérités, la libération des verrous partagés et exclusifs, ainsi que le maintien de l'exclusion lorsqu'un second serveur reste actif. Les six tests ciblés réussissent après correction.
-
-La revue trouve aussi une perte de diagnostic si WebDriver s'arrête avant sa disponibilité. Le même traitement conserve maintenant les sorties pour un arrêt précoce, un délai de disponibilité dépassé ou un refus de session. La conservation du journal ne remplace pas l'erreur d'origine. Deux essais du vrai runner contre un driver HTTP synthétique compilé vérifient l'arrêt précoce et le refus de session, avec les deux flux conservés. Le premier essai dans la sandbox refuse le renommage du journal et conserve bien l'erreur d'origine. Les deux essais hors de cette restriction réussissent leurs assertions.
-
-Le test de préparation Safari couvre désormais cinq situations : instance existante, démarrage à froid, refus d'arrêt, refus d'activation et refus de lancement. L'arrêt sur erreur et l'absence de tentative supplémentaire sont exigés. Le garde refusant cette préparation sur un poste non autorisé reste testé.
-
-Les reproductions locales du coffre Linux et du tray XFCE réussissent chacune deux fois avec de nouvelles sessions isolées. Deux compilations Inno 6.7.1 du script réel, avec un payload synthétique et des chemins contenant espaces et accent, réussissent. Le test lent Windows de compilation, archive et lancement de la version suivante réussit. Les quatre parcours Edge 155 réussissent ensemble avec les chemins temporaires courts Windows.
-
-Actionlint 1.7.12 vérifie le workflow, sans ses analyseurs optionnels ShellCheck/Pyflakes. La syntaxe de 11 scripts Bash et de 8 scripts PowerShell est vérifiée séparément. Les contrôles natifs Clippy et les contrôles WASM réussissent. Les sondes CI protégées et Safari réel ne sont pas déclarés qualifiés par ces contrôles.
-
-Une recompilation simultanée Windows/Linux avec le parallélisme par défaut épuise la mémoire virtuelle locale. Ces exécutions interrompues ne sont pas comptées comme réussies. À la demande de l'utilisateur, les vérifications suivantes utilisent au plus deux CPU, la priorité basse, une compilation et un test à la fois. Windows et Linux sont exécutés successivement. Les limites sont locales au processus et ne changent pas le workflow CI.
-
-Les suites complètes sous cette limite réussissent avec 445 tests Windows et 443 tests Linux, aucun échec et 8 ignorés dans chaque suite. Les six régressions de verrou réussissent aussi trois fois de suite. La version suivante Linux est réellement compilée, archivée, vérifiée et lancée avec succès sous la même limite.
-
-La revue ciblée Astra relève ensuite un dernier chemin à protéger : dans `acquire`, le garde doit exister avant la seconde vérification du marqueur afin d'être détruit si cette vérification échoue. Le placement est corrigé. Le test de récupération couvre maintenant le succès et le refus de vérification pendant qu'un enfant conserve les descripteurs. La lecture bloquante du fils traite aussi `EINTR`. La seconde revue ne relève aucun bloquant supplémentaire. Aucun hook de production réservé au test n'est ajouté.
-
-Après ces dernières retouches, Clippy natif Linux toutes cibles, les 168 tests unitaires de l'application, trois séries de six tests de verrou et les deux tests de préparation Safari réussissent. Les deux tests unitaires ignorés de l'application ne sont pas comptés comme passés. Les cinq situations de préparation Safari sont couvertes avec des outils simulés. Le formatage final reste vérifié séparément. Les contrôles WASM et les parcours Edge ne remplacent toujours pas Safari réel ni les qualifications natives des installeurs. Aucune CI lancée pendant cette vérification.
-
-Une seconde exécution lente Linux sur les sources finalisées après revue réussit aussi : compilation réelle de la version suivante, version observée à l'exécution, archive vérifiée, lancement CLI, santé authentifiée et arrêt. Le test lent ignoré dans les suites ordinaires a donc été exécuté explicitement sous Windows et Linux. Les autres tests ignorés restent non qualifiés localement. Les outils, caches, journaux et limites de performance de cette vérification restent hors Git.
-
-## Diagnostic de la campagne `41218076869`
-
-Cette campagne porte sur `8eaad33`. Les cinq jobs natifs, Edge, Chrome, Firefox et la préparation UI réussissent. Safari et les cinq livraisons échouent. La modification ultérieure `26ac4b0` parallélise les compilations des navigateurs et réutilise les caches. Aucune campagne sur cette modification ne permet encore de la qualifier. Les quinze journaux et les artefacts utiles de la campagne précédente sont conservés localement hors Git. Aucun nouveau lancement CI pendant ce diagnostic.
-
-| Échec observé | Correction et validation |
-| --- | --- |
-| Les cinq contrôles de rollback attendent une ancienne phrase française alors que le journal contient une clé de message | Le producteur et le qualificateur partagent la constante du motif. Le contrôle exige toujours ce motif précis et affiche le motif observé en cas de refus. Un test HTTP synthétique vérifie la preuve de santé, la mauvaise version, le rollback, le pointeur actif et les données inchangées. |
-| Le helper Windows cherche un ancien libellé de tray avec tiret | Il attend désormais le libellé réel avec deux-points. Un contrôle du texte réellement produit et de l'expression du helper réussit sous Windows PowerShell 5.1. Le helper conserve aussi son erreur dans les artefacts synthétiques avant nettoyage. |
-| Le contrôle DEB appelle le bootstrap avec `serve` | Il appelle maintenant le binaire de la version active vérifiée. Une reproduction avec le vrai paquet portable signé de la campagne distingue le refus du bootstrap du refus de maintenance attendu. Aucun dossier de données applicatives n'est ouvert. |
-| Le runtime lancé pendant le `%post` RPM échoue avec ENOENT | Le contrôle des groupes de processus appelle `/bin/ps`. L'inventaire vérifié par SHA256 de l'image Fedora exacte contient `/opt` mais aucun `ps`. Les paquets déclarent désormais `procps` ou `procps-ng`, avec `Requires(post)` pour RPM. Un test vérifie les métadonnées réellement utilisées par les constructeurs. |
-| Safari refuse sa session après le délai de connexion à son instance | Une seule seconde création est permise pour cette classe et ce message précis, avant tout parcours. Les autres erreurs et navigateurs ne sont pas retentés. Sept scénarios WebDriver synthétiques vérifient cette limite, les deux erreurs finales et l'absence de rejeu d'un parcours échoué. La cause interne Safari reste inconnue. |
-
-Les traces de démarrage sont des instantanés bornés, pris avant toute session applicative, y compris après récupération Safari. Les diagnostics natifs Safari sont limités au PID du driver possédé et au runner CI protégé. La copie globale tardive du dossier WebDriver est supprimée. La revue ciblée Astra ne relève pas de bloquant dans ce traitement. Cela ne constitue pas une qualification Safari réelle.
-
-La nouvelle organisation du workflow est conservée. Le job navigateur exige aussi la réussite de son producteur de binaires pour éviter un téléchargement d'artefact absent après échec de compilation. Le test d'intégration du runner préparé réussit sous Windows dans un workspace déplacé sans Cargo disponible.
-
-Les contrôles locaux restent successifs, à deux CPU maximum et en priorité basse. Clippy natif toutes cibles réussit sous Windows et Linux. Les tests applicatifs donnent 161 réussites sous Windows et 169 sous Linux, aucun échec et deux tests ignorés par plateforme. Le runner Windows donne 18 réussites, aucun échec et un test lent ignoré. Le formatage, Actionlint 1.7.12 sans ShellCheck/Pyflakes et la syntaxe des douze scripts Bash et huit scripts PowerShell réussissent. Les tests ignorés, Safari réel et les transactions natives Setup/DEB/RPM restent non qualifiés par ces contrôles locaux.
-
-La suite complète du runner Linux réussit ensuite avec 41 tests passés et deux ignorés, dont 21 tests unitaires. Elle couvre aussi le mode de binaires préparés dans un workspace déplacé, le cache Git macOS avec outils simulés, la préparation Safari simulée, les extensions synthétiques, les dépôts et les exécutions. Le HOME, le XDG et le trousseau restent jetables dans une session D-Bus isolée. Aucun garde CI n'est activé. La sonde TLS réservée à la campagne et la seconde compilation native lente restent ignorées dans cette exécution.
-
-## Campagne `41227913052` sur `e9f86f9`
-
-Une seule campagne complète est lancée sur demande explicite. Les contrôles WASM, les trois préparations de binaires, les parcours Edge, Chrome et Firefox, les jobs natifs Windows et Linux ARM réussissent. Les deux qualifications DEB et la livraison macOS ARM réussissent aussi. Les erreurs décrites ci-dessous viennent des journaux réels de cette campagne, pas d'une nouvelle exécution. Les autres livraisons encore en cours ne sont pas déclarées réussies.
-
-| Cause observée | Correction ou limite |
-| --- | --- |
-| Les tests du cache Git échouent sur les deux macOS, car une mauvaise version est acceptée | Bash 3.2 continue après une assertion `[[ ... ]]` fausse malgré `set -e`. Le test local précédent utilisait Bash 5. Une compilation temporaire de GNU Bash 3.2 reproduit le même échec du test avec Git 2.55.0. Les refus de version Git et de backend TLS sont maintenant explicites. Les quatre cas passent ensuite avec Bash 3.2. Le test permet de choisir son interpréteur avec `ATELIER_TEST_BASH`, sans option ajoutée au produit. |
-| Le job natif Linux x64 refuse un PGID `4294967295` dans le relevé global de `ps` | Le parseur confondait le format du relevé avec les identifiants signés utilisables pour nos signaux. Il conserve maintenant le PGID observé dans un entier large et ignore les valeurs spéciales des groupes extérieurs. Le groupe ciblé doit rester strictement positif. Les bornes, champs, PID du groupe et la vérification réelle `getpgid` restent contrôlés. Les cibles des signaux et `WNOWAIT` ne changent pas. Une régression conserve le membre réel du groupe malgré ces lignes extérieures. L'origine exacte de la ligne de la CI n'est pas établie. |
-| Le test EOF du faux trousseau macOS Intel attend quinze secondes | `drop(stdin)` est déjà présent dans le commit exécuté. Aucun défaut de fermeture n'est démontré. Les scénarios du faux trousseau sont regroupés séquentiellement, comme les accès déjà sérialisés par `protect`, en conservant EOF Unicode, sortie excessive et échéance réelle de quinze secondes. Une interférence de descripteurs entre enfants concurrents reste une hypothèse, pas une cause prouvée. |
-| Les deux qualifications RPM atteignent les comparaisons de conservation, puis échouent avec `cmp: command not found` | `diffutils` est déclaré explicitement dans les prérequis des deux conteneurs de qualification. La comparaison est conservée. Le démarrage RPM fonctionne désormais et les deux qualifications DEB ont terminé avec succès. Les refus attendus de modification pendant l'exécution ne sont pas comptés comme des erreurs supplémentaires. |
-| Safari refuse ses deux créations de session avant tout parcours | La seconde tentative n'a pas récupéré cette exécution. Le journal conservé contient les deux erreurs. Aucun correctif supplémentaire supposé, délai accru ou parcours ignoré n'est ajouté. Safari reste non résolu et ne peut pas être qualifié depuis le poste Windows. |
-
-Les autres assertions autonomes `[[ ... ]]` des sondes de comptes et du wrapper de trousseau reçoivent le même refus explicite compatible Bash 3.2. Leurs conditions et gardes CI restent identiques. Aucun compte ni trousseau personnel n'est utilisé pour les vérifier. La revue ciblée Astra ne relève pas de bloquant dans le parseur modifié, l'isolation du test trousseau ou les refus Bash. Elle ne remplace pas leur exécution sur macOS.
-
-Après correction, Clippy Linux toutes cibles et les 18 tests ciblés réussissent : quatre tests de groupes de processus, quatre tests de fichiers et diffs Git, deux tests d'outils Unix, les scénarios de trousseau, cache Git, runtime POSIX, binaires préparés et préparation Safari simulée. Aucun test de cette sélection n'est ignoré. Le scénario séquentiel du faux trousseau réussit aussi sous Windows. Le formatage et la syntaxe des scripts, dont les scripts macOS analysés par Bash 3.2, sont vérifiés. Ces contrôles utilisent au plus deux CPU, priorité basse et plateformes successives. Les opérations de comptes natifs protégées ne sont pas exécutées localement.
-
-La livraison macOS Intel termine aussi avec succès. Les tests de mise à jour et rollback Windows réussissent. Le Setup Windows échoue au premier contrôle UIA avec `Native tray control not observed: Atelier Kanban`. Son artefact de diagnostic confirme cette étape pendant que l'API attend encore la fin du job pour rendre son journal disponible. Le libellé initial correspond au code réel et `--no-browser` conserve le démarrage natif. Le service HTTP peut cependant continuer après un échec du helper tray. Les preuves actuelles ne distinguent pas cet échec d'une différence dans l'arbre UIA. Ce défaut reste ouvert, comme Safari.
-
-Le journal d'erreur CI du tray ajoute désormais au plus 32 processus Explorer et Atelier provenant des dossiers synthétiques du runner, avec PID, parent, session et chemin, sans arguments de commande. Le fichier reste borné et une erreur de collecte conserve l'échec initial. Un contrôle sous Windows PowerShell 5.1 extrait uniquement le corps du gestionnaire d'erreur et simule la requête CIM. Il vérifie le filtrage des chemins extérieurs, la limite de processus, la taille du journal, le refus final et la conservation de l'erreur si CIM échoue. Aucune interaction locale avec le bureau. La création et le contrôle réels de l'icône Windows restent non qualifiés. Aucun résultat global réussi n'est annoncé et aucune seconde campagne n'est lancée.
-
-## Passage ciblé préparé pour Safari et le Setup Windows
-
-L'exécutable Windows du paquet signé de `41227913052` est extrait dans un dossier synthétique hors Git. Son seul helper tray est lancé deux fois avec entrée conservée ouverte, port temporaire et dossier de données inexistant. Il répond `atelier-tray/1 ready`, puis se termine normalement après fermeture de l'entrée, avec l'environnement courant et avec l'environnement épuré du produit. Le dossier reste absent et stderr vide. Ce probe crée puis retire uniquement son icône et n'envoie aucun clic. Il vérifie le binaire réel sur le poste de développement, sans qualifier l'installation Setup ni l'arbre UIA du runner Windows.
-
-Les deux campagnes Safari comparées utilisent exactement la même image macOS 15.8.2 et le même Safari 27.2. Leur succès puis échec ne démontrent pas une incompatibilité systématique. Le timeout exact est aussi décrit dans le signalement primaire [Selenium #18109](https://github.com/SeleniumHQ/selenium/issues/18109), avec des clients et capacités différents. Cela soutient une investigation native et ne prouve pas une cause identique. Aucun changement supposé de navigateur, de capacités ou de délai n'est ajouté.
-
-La collecte Safari ne considère plus comme réussie une copie sans aucun fichier du PID possédé. Elle signale le PID, le dossier source, les compteurs et toute collecte incomplète dans le journal de démarrage. Les limites sont explicites : 128 entrées examinées, 16 fichiers et 2 Mio par fichier. Les fichiers des autres PID et les cibles des liens symboliques ne sont pas lus. Le pilote est arrêté et attendu avant la collecte d'un échec terminal. Une récupération réussie conserve son pilote vivant et prend son instantané avant toute session applicative. L'arrêt forcé ne garantit pas le vidage des buffers internes Apple.
-
-Le contrôle Windows conserve son sélecteur et son refus sur ambiguïté. En cas d'échec, il enregistre d'abord l'erreur, puis les processus synthétiques, avant d'interroger UIA. Il conserve ensuite un inventaire des contrôles Explorer avec nom, type, classe, identifiant et état hors écran, sans requêter les contenus d'autres applications. Les champs sont tronqués et les enregistrements plafonnés. La recherche native UIA peut bloquer, mais le délai parent existant de 120 secondes borne le helper et le diagnostic initial est déjà écrit. Le test Windows PowerShell 5.1 simule les métadonnées, une collecte indisponible et de longues valeurs. Il exige que l'erreur soit sur disque avant la requête UIA, et conserve les preuves de processus si cette dernière échoue.
-
-Le nouveau mode manuel `scope=desktop` exécute seulement les familles Safari macOS 15 et livraison Windows, avec leurs préparations nécessaires. Les autres matrices natives, Linux et livraisons macOS sont exclues de ce passage ciblé. Le mode complet reste inchangé. Un test exécute le script de sélection réel du workflow sur huit combinaisons et deux entrées invalides. Les parcours Safari restent tous sélectionnés, avec leurs notices préparées.
-
-Les contrôles locaux réussissent avec deux CPU maximum et plateformes successives : Clippy natif toutes cibles Windows et Linux, 21 tests unitaires du runner Windows, 25 sous Linux, contrats PowerShell, binaires préparés, bootstrap Safari simulé et sélection des runners. Le test lent de seconde compilation reste ignoré dans les deux suites unitaires. Les contrôles de collecte Safari sont synthétiques, y compris le refus des liens sous Unix. Actionlint 1.7.12 sans ShellCheck/Pyflakes et le formatage réussissent. Aucune nouvelle CI lancée. Les deux défauts natifs restent ouverts et le passage ciblé reste à autoriser puis exécuter.
-
-## Résultats du passage ciblé `41232912548`
-
-Une seule campagne `desktop` est lancée après autorisation explicite, sur `116aceb`. La préparation des assets et des binaires réussit. Safari échoue avant les parcours. Le job de livraison Windows échoue au contrôle de l'icône et au scénario négatif de mise à jour. Ses artefacts sont récupérés avant la fin de l'envoi du cache, puis son journal complet est lu après finalisation. Aucun autre lancement pendant cette correction.
-
-Le diagnostic Windows montre le serveur et son helper tray vivants, avec Explorer dans la même session 2. Il montre surtout le bouton `Show Hidden Icons`, de type Button. Le script cherchait `Show hidden icons` par une condition UIA sensible à la casse. Le panneau de débordement ne pouvait donc pas être ouvert et l'icône demeurait introuvable. La comparaison des noms utilise désormais `IgnoreCase`. Le type exact et le refus de toute ambiguïté restent inchangés. Le test construit la condition UIA réelle sous Windows PowerShell 5.1, sans interroger le bureau. Il échoue avec l'ancienne condition, puis réussit avec le libellé effectivement observé et rejette un nom voisin.
-
-Le scénario négatif de mise à jour termine avec rollback et conservation des données, mais son motif est une erreur de transport pendant le GET de preuve de santé. Il n'atteint pas l'assertion de version attendue. Le message actuel ne donne pas la chaîne des causes et ne permet pas d'attribuer avec certitude cette rupture à une étape ou à un code Winsock. Une omission distincte est toutefois confirmée : `ConnectionAborted` n'était pas reconnu comme rupture, contrairement à `ConnectionReset`. La classification ajoute ce seul cas, dont le code Windows 10053 est vérifié. Les délais, les preuves, l'envoi des identifiants et l'absence de rejeu des mutations restent inchangés. L'assertion de mauvaise version n'est pas assouplie.
-
-La trace Safari indique une seule entrée dans le dossier natif, sans correspondance au PID 1612 du lanceur. Apple décrit le [service XPC WebDriver](https://developer.apple.com/documentation/webkit/testing-with-webdriver-in-safari), qui peut être distinct du lanceur. Le filtrage sur ce PID seul ne suffit donc pas à attribuer les traces. Le collecteur prend maintenant un inventaire borné avant le lancement dans le runner CI exclusif. Il conserve uniquement les nouveaux fichiers `safaridriver.*` apparus dans cette fenêtre, avant toute session applicative. Les anciens noms restent exclus, même si leur contenu change. Les liens sont refusés et les limites de copie et de taille sont conservées. Un test accepte le nouveau fichier d'un autre PID, exclut les anciennes traces et vérifie que la copie reste figée après ajout ultérieur de contenu synthétique authentifié.
-
-Safari utilise le chemin officiel `/usr/bin/safaridriver` par défaut, avec l'override de test conservé. Les deux demandes de session imposent `platformName=mac` et activent `safari:diagnose`, comme les contrats desktop et de diagnostic documentés par [Selenium](https://www.selenium.dev/selenium/docs/api/javascript/module-selenium-webdriver_safari-Options.html). Le double HTTP vérifie les capacités réellement envoyées pour les deux demandes et leur absence sur les autres navigateurs. Ce contrat ne prouve pas que le timeout natif est résolu. Aucun nouveau retry ni changement supposé de version Safari ou de runner n'est ajouté.
-
-Les sources finalisées passent Clippy natif toutes cibles sous Windows et Linux. Les suites unitaires de l'application donnent 163 réussites Windows et 171 Linux, avec deux tests ignorés par plateforme. Les neuf tests HTTP passent sur les deux systèmes. Le runner donne 21 tests unitaires réussis Windows et 25 Linux, avec le test lent de seconde compilation toujours ignoré. Le contrat PowerShell, les binaires préparés et la sélection des runners passent également. Le formatage est vérifié. Ces vérifications restent successives, à deux CPU maximum et en priorité basse. La revue ciblée Astra ne relève pas de bloquant. La nouvelle correspondance du bouton est vérifiée par sa condition native et par la régression avant/après, sans clic local. Le reste du parcours Setup et le timeout Safari restent à qualifier sur les runners réels. Aucune CI relancée.
-
-## Campagne ciblée `41237238432` sur `8200652`
-
-La campagne est lancée une seule fois sur demande explicite. Les préparations réussissent. Le scénario réel de mise à jour et rollback Windows réussit également. Son rapport confirme les versions exécutées, la rotation de session, la conversation conservée et le rollback de la mauvaise version. Les échecs restants concernent Safari et le contrôle graphique du Setup.
-
-Le Setup dépasse désormais le premier contrôle de l'icône et invoque le menu Ouvrir. Son nouvel échec est `Native tray control not observed: Atelier Kanban : Prêt / Ready`. La trace montre Edge ouvert, le serveur et le helper vivants dans la même session qu'Explorer, mais aucune icône Atelier visible dans son arbre UIA. Le panneau de débordement a été refermé pendant l'ouverture du navigateur. Le contrôle demandait ensuite l'icône Prêt sans rouvrir ce panneau.
-
-L'attente des boutons réouvre maintenant le panneau lorsque nécessaire, y compris après Ouvrir. Elle laisse cinq cycles de scrutation au panneau pour apparaître avant une nouvelle activation et ignore les contrôles hors écran. Elle peut ainsi récupérer aussi une fermeture survenue avant sa première observation. Le délai reste de quinze secondes. Le type de contrôle, la comparaison exacte hors casse et le refus des ambiguïtés sont conservés. La présence des anciens et nouveaux libellés est vérifiée dans une même condition UIA pour éviter de confondre leur transition avec un panneau fermé. Les sept scénarios PowerShell simulés couvrent ces états, dont le changement de libellé et la fermeture avant le premier poll. Ils ne cliquent pas sur le bureau local et ne rejouent ni Ouvrir ni Quitter.
-
-La collecte Safari fonctionne cette fois. Le fichier `safaridriver.1277.yhjxqg.txt` provient du service derrière le lanceur PID 1276. Il confirme deux réponses HTTP 500 à la création de session, avec les capacités Mac et diagnostic attendues, avant toute exécution applicative. Le timeout Apple persiste. Les changements de capacités et de collecte n'ont donc pas démontré une réparation du service Safari 27.2 fourni sur macOS 15.
-
-La cible navigateur Safari migre vers `macos-26`, sans modifier les cibles natives ni les paquets macOS 15. Ce choix est étayé par une exécution externe réelle : le [job d'intégration Safari de Selenium du 31 octobre 2026](https://github.com/SeleniumHQ/selenium/actions/runs/41167096762/job/124436942777) réussit sur l'image `macos-26-arm64` version `20261026.0455.2`. Le [contenu officiel de cette image](https://github.com/actions/runner-images/blob/main/images/macos/macos-26-arm64-Readme.md) fournit Safari et SafariDriver 26.6.2. La configuration Selenium utilise `macos-latest`, qui correspond actuellement à cette image. Les mêmes préparations et parcours Atelier restent exigés. Il s'agit d'une mitigation d'environnement à qualifier pour Atelier, sans déclaration de réparation de Safari 27 sur macOS 15.
-
-Le cache navigateur macOS inclut désormais le label de runner dans sa clé et ses préfixes de restauration. Ainsi macOS 26 ne récupère aucun `target` compilé sur macOS 15. Les clés Windows et Linux restent identiques. Les tests de sélection exigent les cinq anciennes cibles natives et la nouvelle cible Safari, pour le mode ciblé comme pour le mode complet. Aucune erreur n'est ignorée, aucun parcours n'est retiré et aucune nouvelle CI n'est lancée pendant ce changement.
-
-Le contrat PowerShell passe sous Windows PowerShell 5.1 avec les sept scénarios de visibilité et les conditions UIA natives construites sans requête au bureau. Clippy du runner, toutes cibles, et les dix combinaisons du script réel de sélection avec deux refus passent sous Linux. Le formatage et Actionlint 1.7.12 sans ShellCheck/Pyflakes réussissent. Les limites restent de deux CPU, priorité basse et vérifications successives. La revue ciblée ne relève pas de blocage concret supplémentaire. Les parcours Atelier sur la nouvelle image Safari et la séquence Setup complète restent non qualifiés par ces contrôles locaux.
-## Prérelease Windows `v0.1.10` sur `cad95f3`
-
-La campagne `41250211473` sur `2af5517` réussit, mais sa sélection `scope=full` conserve la plateforme par défaut Windows. Elle ne qualifie donc pas les cinq plateformes. Le passage Safari distinct `41247401699` réussit également. La préparation de la signature et la publication de la prérelease Windows sont ensuite autorisées explicitement.
-
-Le workspace passe à `0.1.10`. La voie de distribution réutilise la clé publique historique et le secret GitHub existant, sans récupérer de clé privée sur le poste. Clippy natif toutes cibles Windows, les sept tests du module de signature, les contrats de provenance et de tray, le formatage et Actionlint sans ShellCheck/Pyflakes réussissent localement. Le garde de provenance est également exécuté en lecture seule contre la vraie campagne verte précédente. Les contrôles locaux utilisent au plus deux CPU et une priorité basse. La revue ciblée relève le risque d'un tag préexistant. La création atomique explicite de la nouvelle ref Git le refuse avant publication.
-
-La campagne complète Windows `41253844355` réussit sur `cad95f3692043b4ff0c6a2dfbb77e643da3d2b4e`. Ses journaux réels confirment Clippy/check WASM, la suite Rust et les intégrations natives, les quatre parcours Edge, les paquets, le Setup et les scénarios de mise à jour et rollback. La suite unitaire de l'application donne 167 réussites et deux points d'entrée enfants ignorés par le lancement général, réservés aux scénarios parents. Les autres tests ignorés ne sont pas assimilés à des réussites.
-
-Le workflow manuel `41255676084` accepte cette campagne exacte, signe les archives avec la clé de distribution, reconstruit le Setup avec cette confiance et réussit sa qualification complète. L'upgrade installé emploie directement le successeur signé avec la même clé. Ce successeur reste dans le runner jetable et n'est pas téléversé. Le workflow vérifie la signature détachée de `SHA256SUMS` et les quatre empreintes avant publication. Les deux jobs de signature/qualification et de publication réussissent.
-
-La [prérelease Windows v0.1.10](https://github.com/FluryWaana/atelier/releases/tag/v0.1.10) est publiée le 1 novembre 2026. Ses six assets sont l'archive de mise à jour, son manifeste signé, le Setup, la clé publique et les deux fichiers d'empreintes/signature. Les fichiers publics sont ensuite téléchargés et revérifiés localement : signature Ed25519 des empreintes, quatre hashes et authentification/extraction de l'archive de mise à jour pour la bonne cible et la bonne version réussissent. Aucun Setup publié n'est exécuté sur le poste. La ref du tag pointe exactement sur `cad95f3`.
-
-Cette publication est une prérelease Windows x64 et ne constitue pas une qualification Linux ou macOS sur ce commit. Elle ne porte aucun certificat Authenticode. La clé privée reste dans GitHub. La recherche automatique des mises à jour stables exclut cette prérelease.
-
-## Campagne ciblée `41244439133` sur `a2599e0`
-
-Une seule campagne desktop est lancée après autorisation explicite. Le job Safari réussit. Son journal confirme les quatre parcours application, diagnostics, Jira et mises à jour. Les préparations réussissent également. Les paquets signés Windows et les scénarios indépendants de mise à jour et rollback réussissent. Le Setup atteint maintenant les boutons attendus et invoque Quitter, puis échoue dans la confirmation de fermeture HTTP et de libération du fichier de verrou. Son relevé ne contient plus de processus Atelier ni d'icône. Cela concorde avec un arrêt, sans constituer à lui seul la preuve du verrou libéré.
-
-Le contrôle jetait chaque tentative TCP dont `Wait(1000)` ne terminait pas immédiatement. Sous Windows, un refus loopback peut arriver après cette seconde. Une reproduction sous Windows PowerShell 5.1, avec un vrai listener synthétique arrêté par un menu simulé et un fichier libre, échoue avec le code précédent après trente secondes. Le contrôle conserve maintenant la même tâche jusqu'à son résultat ou à la limite globale existante. Seul `ConnectionRefused` autorise ensuite le contrôle exclusif du fichier. Ni un timeout ni un autre échec réseau ne comptent comme arrêt réussi.
-
-Le même scénario réel passe après correction dans `b74dfa0`. Il est intégré au contrat PowerShell existant sans lecture ni action sur le bureau. Ce contrat complet réussit, avec deux CPU maximum et priorité basse. La revue ciblée ne relève aucun bloquant et `diff --check` réussit. Aucun code produit, délai global ni garde CI ne change. Le Setup complet, dont la suite de mise à jour installée et de désinstallation n'a pas été atteinte, reste à qualifier. Aucun second lancement de CI pendant cette correction.
-
-## Campagne ciblée `41241805125` sur `6ea2cfc`
-
-Les journaux finaux des deux jobs en échec sont lus. Les préparations réussissent. Safari répond à `GET /status`, puis le client échoue avec `no native root CA certificates found` et une erreur de lecture des réglages de confiance système. La trace native ne contient aucune demande de session. Le constructeur Rustls de Fantoccini chargeait ces certificats avant une connexion pourtant exclusivement HTTP locale.
-
-Le client WebDriver utilise maintenant le connecteur HTTP existant et valide son adresse avec le contrat local partagé. Seul `http://127.0.0.1:port` est accepté. Les connexions HTTPS applicatives et leurs certificats restent inchangés. La dépendance hyper-util déjà verrouillée passe des dépendances de test aux dépendances du runner. `Cargo.lock` reste identique. Aucun délai ni retry supplémentaire n'est ajouté.
-
-L'ancien exécutable de test reproduit le refus avec un magasin de certificats synthétique vide. Le nouveau test exécute dans un enfant isolé les scénarios existants de sessions WebDriver avec ce même environnement. Il exige leur exécution effective et leur réussite. Un second test refuse HTTPS, les autres hôtes, le port nul et les chemins supplémentaires.
-
-Le seul échec du journal Windows final concerne le bouton prêt. L'inventaire UIA montre un Button visible nommé `Atelier Kanban Atelier Kanban : Prêt / Ready`. Explorer préfixe ici le titre de l'application au tooltip. Le sélecteur accepte cette variante exacte uniquement pour les deux libellés connus du bouton Atelier. Les menus et le bouton de débordement ne reçoivent aucun alias. Le type, la comparaison hors casse et le refus des ambiguïtés restent imposés. Le contrat PowerShell vérifie les conditions UIA natives sans interroger le bureau, y compris les noms voisins refusés et les sept scénarios de visibilité existants.
-
-Clippy natif toutes cibles Windows et Linux réussit. Les 23 tests unitaires du runner Windows et les 27 sous Linux passent, ainsi que le contrat PowerShell, les binaires préparés sur les deux systèmes et la sélection du workflow sous Linux. Le test lent de seconde compilation reste ignoré sur chaque plateforme. Le formatage est vérifié. La revue ciblée ne relève aucun bloquant. Les contrôles locaux restent limités à deux CPU, priorité basse et plateformes successives. Ces résultats ne qualifient pas Safari natif ni le Setup complet. Aucune nouvelle CI n'est lancée pendant cette correction.
-
-## Correction du démarrage installé et de la présentation Windows, candidat 0.1.11
-
-La campagne complète cinq plateformes `41257250877` sur le tag `v0.1.10` échoue. Dix-huit jobs réussissent, dont les cinq livraisons natives et Safari. Le job Edge termine ses assertions de mise à jour et rollback, puis échoue pendant l'arrêt de sa fixture sur une requête HTTP de santé. Cet échec n'est ni ignoré ni déclaré réparé. Le diagnostic distingue désormais les catégories d'erreur réseau sans enregistrer URL, jeton ou message sensible. Un nouveau test avec un vrai flux SSE authentifié vérifie arrêt, fin du flux, libération du verrou et redémarrage sous Windows et Linux. Il réussit sur les deux plateformes et ne suffit pas à expliquer l'échec distant.
-
-Après installation publique, le retour utilisateur révèle une lacune de qualification. Les contrôles précédents fournissaient un dossier synthétique explicite et n'exerçaient pas le chemin par défaut du raccourci. Une reproduction avec le binaire publié et un ancien dossier synthétique non vide confirme le refus de démarrer. Les données antérieures ne sont pas ouvertes ni modifiées. Le candidat conserve les espaces Rust valides et demande confirmation avant de créer un espace distinct lorsqu'un ancien format est présent. Un refus ne crée rien. Les erreurs d'un lancement normal deviennent visibles dans un dialogue Windows.
-
-Le nom public devient `Atelier Kanban` dans le Setup et les raccourcis. L'exécutable embarque l'icône historique et les ressources de version issues de Cargo. Les deux contrôles du vrai binaire candidat vérifient ces ressources et l'absence d'import d'un runtime Visual C++ à installer séparément. Le binaire public 0.1.10 importait `VCRUNTIME140.dll`. Ce défaut de distribution ne démontre pas à lui seul la cause rencontrée par l'utilisateur.
-
-Les trois démarrages installés synthétiques réussissent localement, puis de nouveau après le changement de liaison CRT : premier lancement, ancien espace Rust compatible, ancien format préservé puis nouvel espace explicitement choisi. La suite native Windows complète et Clippy toutes cibles passent après cette recompilation. Les tests explicitement ignorés ne sont pas assimilés à des réussites. La comparaison des imports rejette le binaire public 0.1.10 et accepte le candidat statique. La revue ciblée ne relève plus de blocage après correction du choix du toolset MSVC et conservation du comportement console existant.
-
-Les contrats de provenance Unix et de sélection des jobs passent sous Linux. Clippy et check séparés de `atelier-ui` pour `wasm32-unknown-unknown` passent également. Actionlint sans ShellCheck/Pyflakes et le formatage sont vérifiés. Ces vérifications locales sont successives, à deux CPU maximum et en priorité basse.
-
-Un nouveau scénario réservé au runner Windows jetable contrôle le raccourci réellement créé, ses arguments vides, son répertoire, le binaire installé et les réponses Non/Oui au dialogue. Il n'est pas exécuté sur le poste personnel. Aucun nouveau Setup n'est publié. Une unique campagne complète cinq plateformes est autorisée par l'utilisateur après les vérifications locales. Son résultat reste à lire et n'est pas présumé réussi. La mise à jour du seul payload ne remplace pas le lanceur racine 0.1.10. La correction de ce lanceur nécessite un nouveau Setup qualifié, sans déplacement du tag ni remplacement des assets 0.1.10.
+Workflow badges link to their actual run status. They do not certify every platform at the current source revision. Inspect job logs and artifacts before reporting a result. Local verification does not authorize workflow dispatch, tags or release publication.

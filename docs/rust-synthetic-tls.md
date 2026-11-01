@@ -1,25 +1,35 @@
-# Parcours TLS synthétique — scénario écrit, non exécuté
+# Synthetic TLS tests
 
-Commande réservée à la campagne finale : `cargo test -p atelier-app --test synthetic-tls --locked -- --ignored`. Les deux tests sont ignorés dans la suite ordinaire et exigent `CI=true` et `ATELIER_RUST_FINAL_CAMPAIGN=1` ; cette exclusion n’est pas une réussite.
+TLS fixtures exercise real adapters against temporary HTTPS servers without a real account. They use synthetic databases, repositories, tokens and compiled agents.
 
-Le scénario natif utilise les vrais adaptateurs Reqwest et cas d’usage SQLite : lecture Jira Cloud en HTTPS, import, nouvelle lecture sans écraser titre/notes/critère humains, saisie de temps, lecture du compte synthétique, aperçu et confirmation Tempo, effet serveur suivi d’une réponse TLS interrompue, fermeture/réouverture de SQLite, reprise incertaine et rapprochement GET paginé sans second POST. L’identifiant distant est conservé avant la relecture exacte puis l’export est confirmé ; la carte humaine reste identique. Une lecture de PR GitHub Enterprise vérifie aussi l’origine/site/dépôt/numéro exacts et reconstruit son lien au lieu de suivre l’URL distante déclarée.
+## Integration transport
 
-Les configurations initiales sont synthétiques et injectées dans une base neuve. Ce parcours entre adaptateurs et cas d’usage ne constitue pas un parcours des écrans ou handlers HTTP de configuration. Il n’exécute ni review, agent, automatisation, smart-HTTP Git ni publication de PR ; leurs preuves TLS de bout en bout restent distinctes.
+```text
+cargo test -p atelier-app --test synthetic-tls --locked -- --ignored
+```
 
-OpenSSL est appelé uniquement lors de l’exécution finale, par chemin OS absolu (`/usr/bin/openssl` sous Unix, `%ProgramFiles%/Git/usr/bin/openssl.exe` sous Windows), avec configuration explicite compatible LibreSSL, environnement vidé et HOME temporaire. CA, clés RSA et certificats de deux jours restent dans un `TempDir` OS privé, hors workspace/artefacts. Aucun magasin de confiance, DNS, fichier hosts ou trousseau personnel n’est modifié. L’absence de cet outil fait échouer le scénario, sans désactiver TLS.
+The ignored tests require `CI=true` and `ATELIER_RUST_FINAL_CAMPAIGN=1` inside the intended disposable environment. They cover Jira reads and import, preservation of human card content, human time entries, Tempo preview and confirmation, interrupted responses and reconciliation without another POST. Forge reads verify exact site, repository and request identity.
 
-Le serveur écoute exclusivement `127.0.0.1` sur un port éphémère. Les constructeurs `synthetic_tls` exigent HTTPS, IP loopback, port explicite, jeton marqué `synthetic-` et CA fournie ; aucun proxy, redirection, répétition implicite, racine système ou vérification TLS désactivée. Ces constructeurs ne sont reliés à aucune route, option ou configuration runtime du produit. Les constructions normales restent inchangées. Les tests négatifs utilisent une autre CA et un certificat signé pour une autre IP afin de vérifier le refus avant tout appel HTTP ; les origines non loopback et les jetons non marqués sont refusés.
+These are native adapter and use case tests. They do not establish configuration screen behavior or browser TLS coverage.
 
-Les dépendances du serveur de test (`tokio-rustls` 0.26.6 et `hyper-util` 0.1.21) étaient déjà verrouillées. Le fournisseur AWS-LC est choisi explicitement, comme Reqwest 0.13.5 ; aucune seconde implémentation crypto ni dépendance de certificats n’est ajoutée. Les outils serveur et clés n’entrent pas dans les paquets Rust.
+## Certificates and isolation
 
-**État exact : code et scénarios écrits, formatage effectué ; aucun build, test, Clippy, scénario navigateur ou workflow exécuté.** Aucun résultat de réussite TLS ni qualification R04/R05/R07 n’est déduit de leur présence.
+OpenSSL generates a temporary CA and short lived certificates in a private OS temporary directory. The executable uses an absolute platform path, explicit configuration, cleared environment and temporary HOME. Missing OpenSSL fails the test. No trust store, DNS configuration, hosts file or personal keychain is modified.
 
-## Publication, review et automatisation natives
+Servers bind to `127.0.0.1` on ephemeral ports. Synthetic clients require HTTPS, explicit loopback address and port, a `synthetic-` token and the supplied CA. They disable proxies, redirects and implicit retry while keeping TLS verification enabled. Foreign CAs, incorrect certificate addresses and nonlocal origins are rejection cases.
 
-`cargo test -p xtask --test forge-review-tls --locked -- --ignored` est réservé à la même campagne finale CI. Ce scénario écrit utilise un vrai dépôt, un worktree géré et deux commits synthétiques ; le serveur TLS compose l’API GitHub Enterprise et le vrai `git http-backend`. Il déroule le moteur d’automatisation existant avec processus compilés : développement, vérification, confirmation de publication, nouvelle vérification, effet de création suivi d’une erreur de réponse, journal incertain et rapprochement sans second POST, observation des commits, review et revalidation avant état prêt. Le faux agent lit réellement `src/lib.rs` et produit son bilan ; aucun résultat de run ni contexte de review terminé n’est injecté. Les critères humains restent décochés.
+These constructors are test fixtures and are not exposed through application routes or runtime settings.
 
-`reviews::prepare` délègue à une composition explicite des adaptateurs, avec les mêmes contrôles de worktree/source/target/base et un contrôle supplémentaire de portée de la PR observée. La préparation synthétique utilise le fetch Git HTTPS authentifié réel. CA étrangère, nom TLS incorrect, dépôt voisin et modification réelle du fichier sont des refus attendus ; les assertions contrôlent HEAD, index et FETCH_HEAD. Ces assertions restent **non exécutées**.
+## Publication and review
 
-Le transport Git synthétique écrit uniquement la CA publique dans son HOME éphémère, conserve le jeton dans l’environnement de configuration limité à l’URL exacte, exige `sslVerify=true` et indique la CA et un répertoire de CA vide. Sous Linux, il conserve le backend natif du Git provisionné (GnuTLS sur Ubuntu), qui lit ce bundle explicite ; il ne demande pas un backend OpenSSL indisponible dans ce curl. Sous Windows et macOS, il demande explicitement OpenSSL et la campagne doit provisionner un Git/curl OpenSSL effectif : [la documentation Git](https://git-scm.com/docs/git-config#Documentation/git-config.txt-httpsslBackend) précise que le choix de backend peut être ignoré par un curl sans sélection à l’exécution. Sous Schannel, `schannelUseSSLCAInfo=true` demande le bundle fourni à la place du magasin Windows. Aucun trousseau ni magasin OS n’est modifié ; une plateforme dont le backend effectif n’est pas établi ne doit pas être qualifiée par ce seul fichier.
+```text
+cargo test -p xtask --test forge-review-tls --locked -- --ignored
+```
 
-Ce parcours reste natif : il ne constitue pas une preuve WebDriver de configuration TLS ou des écrans. Les parcours UI séparés couvrent leurs contrats déclarés. Aucun serveur fixture, certificat, variable de confiance, route spéciale ou registre global n’a été ajouté à `AppState` ni au runtime distribué pour faire passer un scénario navigateur.
+This scenario uses a managed worktree, real synthetic commits, a TLS forge API and `git http-backend`. Compiled fake agents exercise development, verification, confirmed publication, an interrupted creation response, reconciliation, review and source revalidation. Human criteria remain unchecked.
+
+Assertions verify HEAD, index and FETCH_HEAD preservation and reject wrong TLS identity, another repository and changed source content. The fixture observes actual processes rather than injecting a completed agent report.
+
+Git uses an explicit CA bundle in its temporary HOME, exact origin credential scope and `sslVerify=true`. Linux retains its provisioned TLS backend. Windows and macOS require an effective OpenSSL capable Git/curl setup. The fixture must verify the actual backend rather than assume a requested setting was honored.
+
+Certificates, fixture servers and private keys remain outside product packages. See [verification](rust-final-qualification.md) for platform and disposable environment requirements.
