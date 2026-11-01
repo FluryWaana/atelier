@@ -30,7 +30,7 @@ cargo xtask test-ui --prepared-assets
 | Variable | Purpose |
 | --- | --- |
 | `ATELIER_TEST_BROWSER` | Select `chrome`, `firefox`, `edge` or `safari` |
-| `ATELIER_TEST_JOURNEY` | Select `application`, `diagnostics`, `jira`, `updates` or `all` |
+| `ATELIER_TEST_JOURNEY` | Select `application`, `projects`, `diagnostics`, `jira`, `updates` or `all` |
 | `ATELIER_WEBDRIVER` | Explicit driver executable |
 | `ATELIER_TEST_BROWSER_BINARY` | Explicit supported browser executable |
 | `ATELIER_TEST_ASSETS` | Prepared UI assets |

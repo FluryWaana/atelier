@@ -1281,6 +1281,7 @@ fn App() -> impl IntoView {
                     "Local"
                 </span>
             </header>
+            <Show when={move || view.get() != WorkspaceView::Projects}>
             <section class="heading" hidden={move || view.get() == WorkspaceView::Task}>
                 <div>
                     <h1 id="workspace-title">{move || i18n.text(view.get().heading().0)}</h1>
@@ -1303,6 +1304,7 @@ fn App() -> impl IntoView {
                     </crate::button::Button>
                 </div>
             </section>
+            </Show>
             <section class="toolbar" hidden={move || !workspace_controls()}>
                 <nav class="tabs" aria-label={move || i18n.text("message.project_views")}>
                     {[
@@ -2152,6 +2154,10 @@ fn App() -> impl IntoView {
                     repository
                     token
                     on_close={Callback::new(move |()| commit_view.run(WorkspaceView::Overview))}
+                    on_open_tasks={Callback::new(move |repo: String| {
+                        repository.set(repo);
+                        commit_view.run(WorkspaceView::Board);
+                    })}
                 />
             </Show>
             <footer>

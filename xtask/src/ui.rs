@@ -361,7 +361,7 @@ pub async fn test(prepared_assets: bool, prepared_binaries: bool) -> Result<()> 
     let requested_journey = std::env::var("ATELIER_TEST_JOURNEY").unwrap_or("all".into());
     if !matches!(
         requested_journey.as_str(),
-        "all" | "application" | "diagnostics" | "jira" | "updates"
+        "all" | "application" | "projects" | "diagnostics" | "jira" | "updates"
     ) {
         return Err("Parcours navigateur inconnu.".into());
     }
@@ -547,8 +547,10 @@ pub async fn test(prepared_assets: bool, prepared_binaries: bool) -> Result<()> 
     let journeys = [
         (
             "application",
-            Box::pin(scenario(&client, &http)) as Pin<Box<dyn Future<Output = Result<()>> + '_>>,
+            Box::pin(scenario(&client, &http, false))
+                as Pin<Box<dyn Future<Output = Result<()>> + '_>>,
         ),
+        ("projects", Box::pin(scenario(&client, &http, true))),
         (
             "diagnostics",
             Box::pin(diagnostics_scenario(&client, &http)),
@@ -739,7 +741,7 @@ async fn diagnostics_scenario(client: &Client, http: &reqwest::Client) -> Result
     Ok(())
 }
 
-async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
+async fn scenario(client: &Client, http: &reqwest::Client, projects_only: bool) -> Result<()> {
     let data = tempfile::tempdir()?;
     let port = free_port()?;
     let address = format!("http://127.0.0.1:{port}");
@@ -813,6 +815,9 @@ async fn scenario(client: &Client, http: &reqwest::Client) -> Result<()> {
         vec![],
     )
     .await?;
+    if projects_only {
+        return projects_scenario(client, http, &address, &token, data.path()).await;
+    }
     click(client, "#command-button").await?;
     wait_dom(client, "return document.querySelector('#command-dialog')?.matches(':modal') && document.activeElement?.id === 'command-query' && document.querySelector('#command-dialog').getAttribute('aria-labelledby') === 'command-title';", vec![]).await?;
     let query = client.find(Locator::Css("#command-query")).await?;
@@ -3218,15 +3223,49 @@ async fn projects_scenario(
     click(client, "#project-form button[type=submit]").await?;
     wait_dom(client, "return document.querySelectorAll('#project-list .project-choice').length === 2 && !document.querySelector('#project-create-dialog');", vec![]).await?;
     let id = client.execute("return Array.from(document.querySelectorAll('#project-list [data-project-id]')).find(button=>button.querySelector('strong').textContent === 'Projet depuis l’interface').dataset.projectId;", vec![]).await?;
+    let project_id = id.as_str().ok_or("Projet sans id")?;
+    for width in [1440, 768, 390] {
+        client.set_window_size(width, 1000).await?;
+        wait_dom(
+            client,
+            "const rows=Array.from(document.querySelectorAll('.project-row'));return document.documentElement.scrollWidth<=window.innerWidth&&rows.length===2&&rows.every(row=>{const name=row.querySelector('strong'),configure=row.querySelector('.project-choice-action'),tasks=row.querySelector('.project-row-tasks');return name?.textContent.trim()&&name.getBoundingClientRect().width>0&&configure?.textContent.trim()&&configure.getBoundingClientRect().width>0&&tasks?.textContent.trim()&&tasks.getBoundingClientRect().width>0;});",
+            vec![],
+        )
+        .await?;
+        std::fs::write(
+            root().join(format!(".artifacts/rust-ui-project-catalog-{width}.png")),
+            client.screenshot().await?,
+        )?;
+    }
     click(
         client,
-        &format!(
-            "[data-project-id='{}']",
-            id.as_str().ok_or("Projet sans id")?
-        ),
+        &format!(".project-row:has([data-project-id='{project_id}']) .project-row-tasks"),
     )
     .await?;
+    wait_dom(
+        client,
+        "return location.pathname === '/board' && document.querySelector('#board-project')?.selectedOptions[0]?.textContent === 'Projet depuis l’interface';",
+        vec![],
+    )
+    .await?;
+    click(client, "#manage-projects").await?;
+    wait_dom(
+        client,
+        "return location.pathname === '/projects' && !!document.querySelector('.project-row');",
+        vec![],
+    )
+    .await?;
+    click(client, &format!("[data-project-id='{project_id}']")).await?;
     wait_dom(client, "return document.querySelector('#save-project')?.disabled === true && document.querySelector('#add-project')?.disabled === false;", vec![]).await?;
+    for width in [1440, 768, 390] {
+        client.set_window_size(width, 1000).await?;
+        wait_dom(client, "return document.documentElement.scrollWidth <= window.innerWidth && document.querySelector('#project-settings-title')?.getBoundingClientRect().width > 0 && document.querySelector('#project-settings-form')?.getBoundingClientRect().width > 0;", vec![]).await?;
+        std::fs::write(
+            root().join(format!(".artifacts/rust-ui-project-editor-{width}.png")),
+            client.screenshot().await?,
+        )?;
+    }
+    client.set_window_size(1440, 1000).await?;
     click(client, "#reset-project").await?;
     wait_dom(client, "return document.querySelector('#project-settings-panel')?.hidden === true && !document.querySelector('#project-confirmation-dialog');", vec![]).await?;
     click(
@@ -3451,7 +3490,7 @@ async fn projects_scenario(
     )
     .await?;
     click(client, ".project-open-tasks").await?;
-    wait_dom(client, "return location.pathname === '/overview' && document.querySelector('#board-project')?.selectedOptions[0]?.textContent === 'Projet renommé';", vec![]).await?;
+    wait_dom(client, "return location.pathname === '/board' && document.querySelector('#board-project')?.selectedOptions[0]?.textContent === 'Projet renommé';", vec![]).await?;
     new_task(client).await?;
     client.execute("const select=document.querySelector('#new-project');select.value=Array.from(select.options).find(option=>option.textContent === 'Projet renommé').value;select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
     client

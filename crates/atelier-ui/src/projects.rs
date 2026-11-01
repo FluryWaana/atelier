@@ -115,6 +115,7 @@ pub fn Projects(
     repository: RwSignal<String>,
     token: StoredValue<Result<String, String>>,
     on_close: Callback<()>,
+    on_open_tasks: Callback<String>,
 ) -> impl IntoView {
     let i18n = expect_context::<I18n>();
     let projects = board.projects;
@@ -534,9 +535,22 @@ pub fn Projects(
             }
         });
     };
+    let start_creation = Callback::new(move |()| {
+        navigation.set_value(Some(Callback::new(move |()| {
+            select(Draft::default());
+            editing.set(false);
+            creating.set(true);
+        })));
+        request_close();
+    });
     view! {
         <section id="projects-page" class="projects-page" aria-labelledby="workspace-title">
-            <div class="projects-page-actions">
+            <header class="project-page-heading">
+                <div>
+                    <h1 id="workspace-title">{move || i18n.text("message.my_projects")}</h1>
+                    <p id="workspace-subtitle">{move || i18n.text("message.manage_project_settings")}</p>
+                </div>
+                <div class="projects-page-actions">
                 <crate::button::Button
                     disabled={Signal::derive(move || pending.get())}
                     {..}
@@ -550,6 +564,9 @@ pub fn Projects(
                         }
                     }}
                 >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+                        <path d="m12 5-7 7 7 7M5 12h14" />
+                    </svg>
                     {move || {
                         i18n.text(
                             if editing.get() {
@@ -567,29 +584,18 @@ pub fn Projects(
                     {..}
                     id="add-project"
                     type="button"
-                    on:click={move |_| {
-                        navigation
-                            .set_value(
-                                Some(
-                                    Callback::new(move |()| {
-                                        select(Draft::default());
-                                        editing.set(false);
-                                        creating.set(true);
-                                    }),
-                                ),
-                            );
-                        request_close();
-                    }}
+                    on:click={move |_| start_creation.run(())}
                 >
                     {move || i18n.text("message.add_a_project")}
                 </crate::button::Button>
-            </div>
+                </div>
+            </header>
             <p class="error" role="alert" hidden={move || editing.get() || creating.get()}>
                 {error_text}
             </p>
             <div class="projects-workspace" class:project-detail-open={move || editing.get()}>
                 <section class="project-catalog" aria-label={move || i18n.text("message.saved_projects")}>
-                    <h2>{move || i18n.text("message.saved_projects")}</h2>
+                    <h2 hidden={move || projects.get().is_empty()}>{move || i18n.text("message.saved_projects")}</h2>
                     <div id="project-list">
                         <For
                             each={move || projects.get()}
@@ -606,6 +612,7 @@ pub fn Projects(
                                         })
                                 };
                                 view! {
+                                    <div class="project-row">
                                     <crate::button::Button
                                         disabled={Signal::derive(move || pending.get())}
                                         class="ui-card-choice project-choice"
@@ -673,13 +680,44 @@ pub fn Projects(
                                             </svg>
                                         </span>
                                     </crate::button::Button>
+                                    <crate::button::Button
+                                        disabled={Signal::derive(move || pending.get())}
+                                        class="project-row-tasks"
+                                        {..}
+                                        type="button"
+                                        on:click={move |_| {
+                                            navigation.set_value(Some(Callback::new(move |()| {
+                                                if let Some(project) = current() {
+                                                    on_open_tasks.run(field(&project, "repo"));
+                                                }
+                                            })));
+                                            request_close();
+                                        }}
+                                    >
+                                        {move || i18n.text("message.project_open_tasks")}
+                                    </crate::button::Button>
+                                    </div>
                                 }
                             }}
                         />
                     </div>
-                    <p class="hint" hidden={move || !projects.get().is_empty()}>
-                        {move || i18n.text("message.no_saved_projects")}
-                    </p>
+                    <div class="project-empty" hidden={move || !projects.get().is_empty()}>
+                        <svg class="project-empty-icon" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true">
+                            <path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" />
+                            <path d="M9 13h6m-3-3v6" />
+                        </svg>
+                        <h2>{move || i18n.text("message.project_empty_title")}</h2>
+                        <p>{move || i18n.text("message.project_empty_description")}</p>
+                        <crate::button::Button
+                            disabled={Signal::derive(move || pending.get())}
+                            {..}
+                            type="button"
+                            on:click={move |_| start_creation.run(())}
+                        >
+                            {move || i18n.text("message.add_a_project")}
+                        </crate::button::Button>
+                        <p class="hint">{move || i18n.text("message.project_empty_help")}</p>
+                    </div>
                 </section>
                 <section
                     id="project-settings-panel"
@@ -701,8 +739,7 @@ pub fn Projects(
                                     .set_value(
                                         Some(
                                             Callback::new(move |()| {
-                                                repository.set(original.get_untracked().repo);
-                                                on_close.run(());
+                                                on_open_tasks.run(original.get_untracked().repo);
                                             }),
                                         ),
                                     );
@@ -1129,12 +1166,6 @@ pub fn Projects(
                     </div>
 
                 </section>
-                <p
-                    class="project-selection-hint hint"
-                    hidden={move || editing.get() || projects.get().is_empty()}
-                >
-                    {move || i18n.text("message.select_project_to_configure")}
-                </p>
             </div>
 
         </section>

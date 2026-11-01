@@ -6,6 +6,8 @@ Atelier Kanban is a local workspace for planning tasks and working on Git reposi
 
 Add an existing repository or clone one over HTTPS or SSH. A project groups repository access, agent defaults, launch commands and automation settings. Related projects and service repositories let a task work with more than one codebase.
 
+The project list offers separate actions to open a project's tasks or configure its settings. With no projects, it explains how to add a working folder or clone a repository.
+
 The editor groups settings into General, Agent, Launch and Automation tabs. Values remain available when switching tabs. Saving validates all tabs and focuses the first invalid field. Leaving a modified form requires a choice to keep editing or discard the draft.
 
 Removing a project requires its exact name and can archive its tasks. The Git directory remains on disk. Repository access is a separate explicit authorization.
