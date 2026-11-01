@@ -21,7 +21,7 @@ The HTTP server binds to loopback and validates the local session, Host and Orig
 
 Repository access requires explicit authorization and bounded reads. Paths and service directories reject unsupported names and traversal. Agents and connectors receive selected inputs. Output, execution time and persisted logs have explicit limits.
 
-See [process supervision](rust-posix-runtime.md) for platform guarantees. Agents and connectors execute with the user's rights. Supervision does not provide a security sandbox.
+See [process supervision](process-supervision.md) for platform guarantees. Agents and connectors execute with the user's rights. Supervision does not provide a security sandbox.
 
 ## Storage and concurrency
 
@@ -39,10 +39,10 @@ Publication atomically refuses an existing destination. Cancellation stops owned
 
 ## References
 
-* [Launch and data](rust-launcher.md)
-* [Agents](rust-agent-cli.md)
-* [Integrations](rust-integrations.md)
-* [Connectors](rust-connectors.md)
-* [Workflows](rust-workflows.md)
-* [Packages](rust-packages.md)
-* [Verification](rust-final-qualification.md)
+* [Launch and data](launcher.md)
+* [Agents](agents.md)
+* [Integrations](integrations.md)
+* [Connectors](connectors.md)
+* [Workflows](workflows.md)
+* [Packages](packaging.md)
+* [Testing](testing.md)

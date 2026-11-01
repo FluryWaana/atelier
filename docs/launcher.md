@@ -5,12 +5,12 @@ The `atelier` binary provides `launch`, `stop`, `serve`, `--help` and `--version
 ```text
 atelier --help
 atelier --version
-atelier launch --data-dir SYNTHETIC_DATA --assets BUILT_UI --port 4317 --no-browser
-atelier stop --data-dir SYNTHETIC_DATA --port 4317
-atelier serve --data-dir SYNTHETIC_DATA --assets BUILT_UI --port 4317
+atelier launch --data-dir WORKSPACE_DIRECTORY --assets BUILT_UI --port 4317
+atelier stop --data-dir WORKSPACE_DIRECTORY --port 4317
+atelier serve --data-dir WORKSPACE_DIRECTORY --assets BUILT_UI --port 4317
 ```
 
-Replace the example paths with explicit directories. `launch` starts a background server or reuses a verified instance. `serve` keeps the server in the foreground. Use the same data directory and port to stop an instance. Unknown or repeated options and missing UI assets are refused.
+Replace the example paths with explicit directories. `launch` starts a background server or reuses a verified instance and opens its browser session. Add `--no-browser` to skip opening the browser. `serve` keeps the server in the foreground. Use the same data directory and port to stop an instance. Unknown or repeated options and missing UI assets are refused.
 
 ## Instance identity
 
@@ -30,7 +30,9 @@ The UI defaults to the binary's `ui` directory. Portable installations keep data
 | Linux | `$XDG_DATA_HOME/atelier-kanban-workspace`, with `~/.local/share` as the base fallback |
 | macOS | `~/Library/Application Support/AtelierKanban/workspace` |
 
-A compatible workspace at the alternate application data location remains usable. An unrecognized format requires confirmation before opening a separate empty workspace. Refusal creates no workspace. Invalid markers, links and inaccessible paths remain errors. No workspace is silently moved, converted or erased.
+The launcher also recognizes compatible workspaces at `%LOCALAPPDATA%/AtelierKanban/data`, `$XDG_DATA_HOME/atelier-kanban` or `~/Library/Application Support/AtelierKanban/data`. An initialized default workspace takes precedence. Windows falls back to `~/AppData/Local` when `LOCALAPPDATA` is unavailable.
+
+An unrecognized format in an alternate location requires confirmation before opening a separate empty workspace. Refusal creates no workspace. Invalid markers, links and inaccessible paths remain errors. No workspace is silently moved, converted or erased.
 
 The database has an explicit identity and version. Unsupported formats are refused. Keep the original directory intact when investigating a startup error.
 
@@ -50,4 +52,4 @@ Sessions, locks and local repository authorizations are excluded. Reauthorize re
 
 Limits are 100,000 entries, depth 32, 128 MiB per ordinary file and 1 GiB total outside the database. The database and WAL each have a 1 GiB limit. Links and special files are refused. Import does not delete content to satisfy a limit.
 
-See [packages and updates](rust-packages.md) and [verification](rust-final-qualification.md) for installation and platform checks.
+See [packages and updates](packaging.md) for installation and update controls.

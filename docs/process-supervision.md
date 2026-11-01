@@ -32,4 +32,4 @@ Restarting a service with an automatic port reserves a new port. A configured po
 
 Synthetic process fixtures cover ordinary descendants, cancellation, retained activity on cleanup failure, interactive protocols, connector copies and listener inspection. The `posix-runtime` fixture deliberately creates a detached descendant and closes it through a pipe owned by the test. It verifies the documented limit rather than claiming containment of detached processes.
 
-See [verification](rust-final-qualification.md) for platform execution requirements.
+See [verification](testing.md) for platform execution requirements.

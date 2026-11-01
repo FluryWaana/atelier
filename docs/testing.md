@@ -1,6 +1,6 @@
-# Verification
+# Testing
 
-Verification covers source checks, native tests, browser journeys, packages and desktop interactions. Each result applies to the exact source revision, target and scenario executed. A written scenario, successful compilation or skipped job is not evidence that a user journey passed.
+The test suite covers domain rules, native adapters, browser journeys, packages and desktop interactions. Use synthetic fixtures and a separate workspace for every integration test.
 
 ## Local source checks
 
@@ -48,17 +48,15 @@ cargo xtask test-updates --prepared-delivery .artifacts/rust-delivery
 
 Package qualification builds real release binaries and synthetic successors, checks notices and signatures, installs portable payloads and observes runtime versions, persistence, session renewal and shutdown. Update tests check actual version changes and rollback while preserving workspace records and human files.
 
-Native installer checks must use disposable environments. Setup checks exercise the installed shortcut, icon and version resources, launch, cancellation, data preservation, update, uninstallation and reinstallation. Linux checks use real package managers in disposable native containers. macOS tray checks must exercise Open and Quit rather than infer behavior from icon presence.
-
-A browser passing on one system does not qualify another browser or a native installer.
+Native installer checks use disposable environments. Setup checks exercise the installed shortcut, icon and version resources, launch, cancellation, data preservation, update, uninstallation and reinstallation. Linux checks use real package managers in disposable native containers. macOS tray checks exercise Open and Quit, server shutdown and icon removal.
 
 ## Isolated native checks
 
-Ignored tests are opt in and retain their guards. They require the documented disposable CI or native environment rather than personal accounts or keychains. Setting a guard variable alone does not establish that the environment is safe.
+Ignored native tests require their disposable CI or native environment. Their guards prevent execution against personal accounts or keychains.
 
 Linux credential probes require an isolated D-Bus/XDG session and disposable collection. macOS probes use dedicated temporary keychains and explicit account scope. Windows temporary account provisioning is CI only. Never read, lock or replace a personal credential collection.
 
-See [synthetic TLS tests](rust-synthetic-tls.md) and [process supervision](rust-posix-runtime.md) for transport and process fixtures.
+See [synthetic TLS tests](synthetic-tls.md) and [process supervision](process-supervision.md) for transport and process fixtures.
 
 ## Manual workflows
 
@@ -81,4 +79,4 @@ Rust verification accepts these selections:
 
 Defaults select one browser journey. `desktop` selects Windows Setup and Safari on macOS 26. Native macOS targets use macOS 15 ARM and Intel. `full` with `platform=all` selects all five native targets and the browser matrix. `full_matrix=true` also overrides the platform selection to all five targets.
 
-Workflow badges link to their actual run status. They do not certify every platform at the current source revision. Inspect job logs and artifacts before reporting a result. Local verification does not authorize workflow dispatch, tags or release publication.
+Each run records its source revision, selected targets, job logs and artifacts. Use those details when investigating a failure or reporting test coverage. Badges show the workflow's run status.

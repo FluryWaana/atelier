@@ -57,8 +57,8 @@ See [getting started](docs/getting-started.md) for platform requirements, first 
 * [Features](docs/features.md)
 * [Architecture](docs/architecture.md)
 * [Development and contribution](CONTRIBUTING.md)
-* [Verification](docs/rust-final-qualification.md)
-* [Packaging and updates](docs/rust-packages.md)
+* [Testing](docs/testing.md)
+* [Packaging and updates](docs/packaging.md)
 * [Brand assets](docs/branding.md)
 
 ## Contribute

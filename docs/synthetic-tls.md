@@ -32,4 +32,4 @@ Assertions verify HEAD, index and FETCH_HEAD preservation and reject wrong TLS i
 
 Git uses an explicit CA bundle in its temporary HOME, exact origin credential scope and `sslVerify=true`. Linux retains its provisioned TLS backend. Windows and macOS require an effective OpenSSL capable Git/curl setup. The fixture must verify the actual backend rather than assume a requested setting was honored.
 
-Certificates, fixture servers and private keys remain outside product packages. See [verification](rust-final-qualification.md) for platform and disposable environment requirements.
+Certificates, fixture servers and private keys remain outside product packages. See [verification](testing.md) for platform and disposable environment requirements.

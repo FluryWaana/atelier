@@ -1,6 +1,6 @@
 # Features
 
-Atelier Kanban is a local workspace for planning tasks and working on Git repositories with coding agents. It is in preproduction. This guide describes product behavior. Platform qualification is covered in [verification](rust-final-qualification.md).
+Atelier Kanban is a local workspace for planning tasks and working on Git repositories with coding agents. It is in preproduction.
 
 ## Projects
 
@@ -14,7 +14,7 @@ Removing a project requires its exact name and can archive its tasks. The Git di
 
 Create, edit, duplicate, archive or delete tasks. Tasks hold descriptions, instructions, criteria, dependencies and project or ticket links. Search and project filters find work across the board and archives.
 
-The five stages are `todo`, `doing`, `review`, `done` and `standby`. Projects can rename and reorder their displayed columns. Dragging a card changes its stage and does not start an agent. See [board configuration](rust-kanban-columns.md).
+The five stages are `todo`, `doing`, `review`, `done` and `standby`. Projects can rename and reorder their displayed columns. Dragging a card changes its stage and does not start an agent. See [board configuration](board-columns.md).
 
 Local task creation remains available with an external ticket provider selected. Brainstorm discussions can produce proposals that become tasks. The welcome screen offers task creation and optional project setup without requiring a connector.
 
@@ -22,7 +22,7 @@ Local task creation remains available with an external ticket provider selected.
 
 Profiles configure Codex, Claude Code or a custom command. Projects and tasks can select a profile. Profiles provide installation and connection checks, version information and supported usage or quota information.
 
-Conversations retain output and supported interactions. Runs can be cancelled. A queue coordinates individual runs or project workflows. Services have separate commands, logs, ports and stop controls. See [agents](rust-agent-cli.md), [workflows](rust-workflows.md) and [process supervision](rust-posix-runtime.md).
+Conversations retain output and supported interactions. Runs can be cancelled. A queue coordinates individual runs or project workflows. Services have separate commands, logs, ports and stop controls. See [agents](agents.md), [workflows](workflows.md) and [process supervision](process-supervision.md).
 
 ## Git and reviews
 
@@ -34,7 +34,7 @@ Reviews bind findings to inspected commits and task criteria. Source changes mak
 
 Jira provides search, creation, links, status mapping and confirmed synchronization. GitHub, GitLab and Azure DevOps provide repository integrations. Tempo supports confirmed human time exports. Process connectors expose their declared capabilities.
 
-Ticket and time providers are independent preferences. Changing a default does not convert records or send remote writes. Uncertain operations remain available for recovery. See [integrations](rust-integrations.md) and [connectors](rust-connectors.md).
+Ticket and time providers are independent preferences. Changing a default does not convert records or send remote writes. Uncertain operations remain available for recovery. See [integrations](integrations.md) and [connectors](connectors.md).
 
 ## Time tracking
 
@@ -44,7 +44,7 @@ Record manual entries or use local timers. Human time remains separate from agen
 
 Backups and restoration protect the local workspace. Portable data import copies a supported workspace into an empty destination. Unsupported formats are refused without silent conversion or erasure.
 
-Installed packages can inspect compatible stable releases and prepare authenticated updates. Application updates and CLI updates have separate controls. See [launch and import](rust-launcher.md) and [packages and updates](rust-packages.md).
+Installed packages can inspect compatible stable releases and prepare authenticated updates. Application updates and CLI updates have separate controls. See [launch and import](launcher.md) and [packages and updates](packaging.md).
 
 ## Interface
 

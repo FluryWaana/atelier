@@ -59,9 +59,9 @@ Distribution signatures authenticate package content. They are separate from Win
 atelier install --archive ARCHIVE.zip --signature SIGNED_METADATA.json --trust TRUSTED_PUBLIC_KEY.json --destination NEW_INSTALLATION --mode portable
 ```
 
-Installation refuses an existing destination. It keeps a stable launcher, trusted metadata and separate payload versions. The selected active payload must pass installation validation. Data locations and first launch behavior are documented in [launch and data](rust-launcher.md).
+Installation refuses an existing destination. It keeps a stable launcher, trusted metadata and separate payload versions. The selected active payload must pass installation validation. Data locations and first launch behavior are documented in [launch and data](launcher.md).
 
-Windows Setup integrates the official icon, version resources and shortcut. Uninstallation preserves workspace data. Linux system installations are maintained through the package manager. Desktop integration, tray behavior and native installers require verification on the actual target desktop.
+Windows Setup integrates the official icon, version resources and shortcut. Uninstallation preserves workspace data. Linux system installations are maintained through the package manager.
 
 ## Application updates
 
@@ -75,14 +75,14 @@ A source build can inspect releases. Activation requires an installed package wi
 
 ## Backup and recovery
 
-Before activation, the worker stops the server, locks the workspace, resolves external effects, checks SQLite integrity and creates an atomic catalog backup. An absent database is not created by this step. A failure prevents activation.
+Activation requires all uncertain external effects to be resolved. The worker stops the server, locks the workspace, checks SQLite integrity and creates an atomic catalog backup. An absent database is not created by this step. A failure prevents activation.
 
-The update journal records the backup and activation state. Rollback restores the previous binary while retaining the current database and human files. It does not automatically restore data that could erase recent work. Unsupported database schemas remain errors. A future schema migration requires its own reversibility checks.
+The update journal records the backup and activation state. Rollback restores the previous binary while retaining the current database and human files. It does not automatically restore data that could erase recent work. Unsupported database schemas remain errors.
 
 Manual archive controls use these commands:
 
 ```text
-atelier update-preview --archive NEXT.zip --signature NEXT.json --data-dir SYNTHETIC_DATA --port 4317
+atelier update-preview --archive NEXT.zip --signature NEXT.json --data-dir WORKSPACE_DIRECTORY --port 4317
 atelier update-status
 atelier update-apply --operation ID --confirm
 atelier update-cancel --operation ID --confirm
@@ -97,4 +97,4 @@ cargo xtask sign-package ARCHIVE.zip TARGET NEW_KEYS SIGNED_METADATA.json
 cargo xtask verify-signed-package ARCHIVE.zip SIGNED_METADATA.json NEW_KEYS/synthetic-update-public.json TARGET CURRENT_VERSION
 ```
 
-These commands use synthetic keys in new directories and refuse replacement. Keep fixture private keys out of distributed files. Package, installer and update checks are described in [verification](rust-final-qualification.md).
+These commands use synthetic keys in new directories and refuse replacement. Keep fixture private keys out of distributed files. Package, installer and update checks are described in [verification](testing.md).

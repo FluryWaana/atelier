@@ -26,4 +26,4 @@ The persistent journal distinguishes preparation, running, observed version, ref
 
 A version below the target remains an explicit failure. Providers can install a newer stable version than the preview. CLI rollback is not promised.
 
-Runs, services, active queues, timers, remote effects, exports, backups and application updates block incompatible CLI operations. Changing a profile or check invalidates its confirmation. See [process supervision](rust-posix-runtime.md) for execution guarantees and [verification](rust-final-qualification.md) for synthetic checks.
+Runs, services, active queues, timers, remote effects, exports, backups and application updates block incompatible CLI operations. Changing a profile or check invalidates its confirmation. See [process supervision](process-supervision.md) for execution guarantees.

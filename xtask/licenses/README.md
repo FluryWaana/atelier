@@ -20,4 +20,4 @@ The objc2 family retains the complete upstream `LICENSE.md` at each crate revisi
 
 `libsqlite3-sys` 0.38.2 embeds SQLite 3.53.2, Fossil check in `d6e03d8c777cfa2d35e3b60d8ec3e0187f3e`. The wrapper uses MIT. The separate copyright disclaimer and blessing in `sqlite3/sqlite3.c` remain a complete supplemental notice, bound to the exact source revision and registry checksum.
 
-Recursive collection includes `aws-lc-sys` texts in `aws-lc/LICENSE` and `third_party/fiat/LICENSE`, plus the `LICENSE-*` files in `ring`. Package verification remains a separate check described in [packaging](../../docs/rust-packages.md).
+Recursive collection includes `aws-lc-sys` texts in `aws-lc/LICENSE` and `third_party/fiat/LICENSE`, plus the `LICENSE-*` files in `ring`. Package verification remains a separate check described in [packaging](../../docs/packaging.md).

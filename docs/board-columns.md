@@ -26,4 +26,4 @@ Saving configuration moves no cards and sends no Jira transitions. New imports u
 
 Synchronization proposes a mapped stage and requires separate confirmation. Mapping changes invalidate older synchronization previews. An explicit configuration takes precedence over name matching.
 
-See [integrations](rust-integrations.md) for provider preferences and [verification](rust-final-qualification.md) for synthetic import and concurrency checks.
+See [integrations](integrations.md) for ticket and time provider preferences.

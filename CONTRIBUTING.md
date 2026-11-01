@@ -28,7 +28,7 @@ cargo fetch --locked
 cargo xtask build-ui
 ```
 
-Run relevant real WebDriver journeys against synthetic data for behavior changes. See [verification](docs/rust-final-qualification.md) for preparation and platform requirements. A skipped test is not a passed test. Report checks actually run and unresolved failures.
+Run the relevant WebDriver journeys against synthetic data for behavior changes. See [testing](docs/testing.md) for preparation and platform requirements. Include the commands and results in your pull request, including skipped checks and unresolved failures.
 
 ## Test data
 
@@ -40,4 +40,4 @@ Native credential tests require disposable environments. Linux account probes us
 
 Use Conventional Commits in English, such as `docs: describe source build requirements`. Describe the final behavior, verification and remaining limits. Keep unrelated edits out of the change.
 
-Workflows are manual. This contribution process does not authorize launching CI, creating tags or publishing releases. Repository automation rules are documented in [AGENTS.md](AGENTS.md).
+GitHub Actions workflows use manual triggers. Maintainers manage CI runs and release publication.

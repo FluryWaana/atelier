@@ -26,4 +26,4 @@ Removing a module resets only its defaults to Local while removing its registry 
 
 Preview and confirmation are separate steps. Each confirmed write has a persistent operation identity. After an interrupted response, reconciliation observes the original operation instead of submitting it again. Local descriptions, instructions and criteria remain protected.
 
-See [board mapping](rust-kanban-columns.md), [connector contracts](rust-connectors.md) and [synthetic TLS testing](rust-synthetic-tls.md) for detailed boundaries.
+See [board mapping](board-columns.md), [connector contracts](connectors.md) and [synthetic TLS testing](synthetic-tls.md) for detailed boundaries.

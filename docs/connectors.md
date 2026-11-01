@@ -16,7 +16,7 @@ Each invocation starts one native process in a private working directory with a 
 
 Requests are limited to 256 KiB and responses to 512 KiB. Stderr is separate from the response and is never displayed as raw user output. Reflected secrets are rejected, including inside nested objects and JSON keys. Process errors use safe host messages.
 
-The host uses an explicitly installed executable without implicit shell execution or repository discovery. Executable identity is verified for every call. See [process supervision](rust-posix-runtime.md) for platform behavior.
+The host uses an explicitly installed executable without implicit shell execution or repository discovery. Executable identity is verified for every call. See [process supervision](process-supervision.md) for platform behavior.
 
 ## Request envelope
 
@@ -116,4 +116,4 @@ Publication input contains only the approved repository reference, worktree, bra
 
 `repositoriesReview` supplies an observation rather than an accepted agent report. Atelier creates the review context and runs the selected profile through its normal engine. Revalidation checks sources and module state. Profile revision changes and removal invalidate affected reviews without deleting reports or human content. Human criteria remain unchanged.
 
-See [workflows](rust-workflows.md) for approved publication plans and [verification](rust-final-qualification.md) for compiled synthetic connectors.
+See [workflows](workflows.md) for approved publication plans and [verification](testing.md) for compiled synthetic connectors.

@@ -19,4 +19,4 @@ Use the supplied files and preserve their proportions and transparency. Keep eno
 | Mint | `#9bcbb5` |
 | Charcoal | `#191b24` |
 
-The master artwork is generated imagery. Changes to it require consistent exports for the UI and native packages.
+Keep exports consistent across the UI and native packages when updating the master artwork.

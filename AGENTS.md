@@ -55,7 +55,7 @@ Local tickets and local time tracking must always remain available, including wh
 
 Use plain, natural user-facing text in French and English. Do not use em dashes, en dashes, semicolons or decorative text arrows. Use short sentences and ordinary words instead. These punctuation restrictions apply to prose, not Rust or other code syntax.
 
-Write project documentation in English and describe current usage, behavior and contracts. Do not include development history, decision logs or work session reports. Preserve upstream legal texts verbatim.
+Write project documentation in English and describe current usage, behavior and contracts. Keep discussions, decisions, tradeoffs, owner instructions and work session reports out of public documentation. Do not publish development history or private conversation content. Preserve upstream legal texts verbatim.
 
 Preserve the existing capabilities and translations, including French user-facing text. Build each screen with its use case, including loading, empty/error states, keyboard/focus and unsaved drafts. Avoid exposing implementation details in user flows.
 

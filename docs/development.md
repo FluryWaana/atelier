@@ -30,4 +30,4 @@ An exclusive lock prevents duplicate supervisors. Shutdown uses authenticated `s
 
 `scripts/atelier-windows51.tests.ps1` checks the Windows PowerShell engine used by `Atelier.cmd`. Reports belong in `.artifacts/launcher-verification/` and must not contain session tokens.
 
-The automatic launcher is specific to Windows. On Linux and macOS, use the source build and foreground `serve` commands in [getting started](getting-started.md). Platform qualification requires real execution on the target system.
+The automatic launcher is specific to Windows. On Linux and macOS, use the source build and foreground `serve` commands in [getting started](getting-started.md).

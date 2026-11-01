@@ -25,11 +25,11 @@ Simple selects use the browser's customizable picker where available and retain 
 
 The welcome screen offers local task creation and optional project setup. It disappears when any task exists, including an archived task. Brainstorm discussions alone do not count as a first task. Closing creation restores focus to the visible creation control.
 
-## Verification
+## Testing
 
 ```sh
 cargo clippy -p atelier-ui --target wasm32-unknown-unknown --all-targets --locked -- -D warnings
 cargo check -p atelier-ui --target wasm32-unknown-unknown --locked
 ```
 
-Use real synthetic browser journeys for interaction changes. See [verification](../../docs/rust-final-qualification.md) and [contributing](../../CONTRIBUTING.md).
+Use synthetic browser journeys for interaction changes. See [testing](../../docs/testing.md) and [contributing](../../CONTRIBUTING.md).

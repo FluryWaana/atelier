@@ -69,4 +69,4 @@ The final blocks of `style.css` define common controls and palette. Field tokens
 
 Simple selects use `appearance: base-select` and `::picker(select)` when supported. Other browsers retain their native picker. Multiple selects and visible list selects retain native rendering.
 
-Preserve English and French translations, draft protection, loading and error states, focus restoration and reduced motion. Check representative states at 1440, 768 and 390 pixels, including long labels, empty content, menu edges and invalid fields in hidden tabs. Presentation checks complement the business journeys in [verification](rust-final-qualification.md).
+Preserve English and French translations, draft protection, loading and error states, focus restoration and reduced motion. Check representative states at 1440, 768 and 390 pixels, including long labels, empty content, menu edges and invalid fields in hidden tabs. Presentation checks complement the business journeys in [verification](testing.md).

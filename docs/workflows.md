@@ -36,4 +36,4 @@ A ready workflow advances the queue. Failure, blocking, cancellation or interrup
 
 Starting work places the task in progress. Waiting, failure or stop places it on standby. Readiness places it in human review. A later transition changes the stage only if the workflow still owns the current stage, preserving human changes and completed tasks. An explicit new launch can reopen a completed task.
 
-See [connectors](rust-connectors.md) for module publication and [verification](rust-final-qualification.md) for end to end checks.
+See [connectors](connectors.md) for publication through process modules.
