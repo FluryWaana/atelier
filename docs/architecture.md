@@ -17,7 +17,7 @@ The build uses [rust-toolchain.toml](../rust-toolchain.toml) and [Cargo.lock](..
 
 ## Local security
 
-The HTTP server binds to loopback and validates the local session, Host and Origin. The initial browser session fragment is removed after use. Credentials remain in native protected storage and are not returned to the frontend. The content security policy uses an external module loader.
+The HTTP server binds to loopback and validates the local session, Host and Origin. The initial browser session fragment is removed after use. Saved credentials are encrypted. Windows uses DPAPI. Linux and macOS protect the encryption key through Secret Service or Keychain. Saved secrets are not returned to the frontend. The content security policy uses an external module loader.
 
 Repository access requires explicit authorization and bounded reads. Paths and service directories reject unsupported names and traversal. Agents and connectors receive selected inputs. Output, execution time and persisted logs have explicit limits.
 

@@ -4,15 +4,15 @@ Atelier Kanban is in preproduction. Use [GitHub Releases](https://github.com/Flu
 
 ## Targets and tools
 
-| Platform | Rust target | Distribution formats | Native build requirements |
+| Platform | Rust target | Distribution formats | Additional installer tools |
 | --- | --- | --- | --- |
-| Windows x64 | `x86_64-pc-windows-msvc` | Signed ZIP payload and Setup | MSVC, Windows SDK with `rc.exe`, Inno Setup 6 |
-| Linux x64 | `x86_64-unknown-linux-gnu` | Signed ZIP payload, DEB and RPM | Native compiler, `dpkg-deb`, `rpmbuild`, `desktop-file-validate` |
-| Linux ARM64 | `aarch64-unknown-linux-gnu` | Signed ZIP payload, DEB and RPM | Native compiler, `dpkg-deb`, `rpmbuild`, `desktop-file-validate` |
-| macOS Intel | `x86_64-apple-darwin` | Signed ZIP payload | Xcode command line tools |
-| macOS Apple Silicon | `aarch64-apple-darwin` | Signed ZIP payload | Xcode command line tools |
+| Windows x64 | `x86_64-pc-windows-msvc` | Signed ZIP payload and Setup | Inno Setup 6 |
+| Linux x64 | `x86_64-unknown-linux-gnu` | Signed ZIP payload, DEB and RPM | `dpkg-deb`, `rpmbuild`, `desktop-file-validate` |
+| Linux ARM64 | `aarch64-unknown-linux-gnu` | Signed ZIP payload, DEB and RPM | `dpkg-deb`, `rpmbuild`, `desktop-file-validate` |
+| macOS Intel | `x86_64-apple-darwin` | Signed ZIP payload | None |
+| macOS Apple Silicon | `aarch64-apple-darwin` | Signed ZIP payload | None |
 
-All builds use the committed Rust toolchain and lockfile, Trunk 0.22.1 and wasm-bindgen CLI 0.2.130. Windows uses the static C runtime. Import checks use MSVC `dumpbin` discovered through `vswhere` to reject external Visual C++ runtime DLLs. Build tools are not runtime requirements for users.
+All builds require the [source build tools](getting-started.md#build-from-source), the committed Rust toolchain and lockfile, Trunk 0.22.1 and wasm-bindgen CLI 0.2.130. Windows uses the static C runtime. Import checks use MSVC `dumpbin` discovered through `vswhere` to reject external Visual C++ runtime DLLs. Build tools are not runtime requirements for users.
 
 ## UI build
 

@@ -21,7 +21,7 @@
 
 Atelier Kanban brings planning and implementation into one workspace on your computer. Organize tasks, prepare a Git worktree, run a coding agent, inspect its changes and record your own time. Your tasks and time tracking work locally without an external account.
 
-The native Rust application stores workspace data in SQLite and serves a Leptos interface in your browser. Credentials use the operating system credential store. The application and its build do not require Node.js.
+The native Rust application stores workspace data in SQLite and serves a Leptos interface in your browser. Saved credentials use the operating system's native protection. The application and its build do not require Node.js.
 
 ## Features
 
@@ -38,9 +38,11 @@ The interface is available in English and French. See the [feature guide](docs/f
 
 Find published packages and their release notes on [GitHub Releases](https://github.com/FluryWaana/atelier/releases). The version badge identifies the source tree. Package availability depends on the release and platform. Atelier Kanban is in preproduction.
 
-To run from source, install the toolchain from [rust-toolchain.toml](rust-toolchain.toml), Git, Trunk 0.22.1 and wasm-bindgen CLI 0.2.130. Then run:
+To run from source, install the toolchain from [rust-toolchain.toml](rust-toolchain.toml), Git, Trunk 0.22.1 and wasm-bindgen CLI 0.2.130. See [build prerequisites](docs/getting-started.md#build-from-source) for the native compiler and tool setup. In a terminal, clone the repository and run the build from its root:
 
 ```sh
+git clone https://github.com/FluryWaana/atelier.git
+cd atelier
 cargo fetch --locked
 cargo xtask build-ui
 cargo build -p atelier-app --locked

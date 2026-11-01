@@ -16,7 +16,15 @@ On Linux, credential storage requires `secret-tool` and an unlocked Secret Servi
 
 ## Build from source
 
-Install Git and the Rust toolchain pinned by [rust-toolchain.toml](../rust-toolchain.toml), including the `wasm32-unknown-unknown` target. Install Trunk 0.22.1 and wasm-bindgen CLI 0.2.130 in your PATH. Native compiler requirements are listed in [packaging](packaging.md).
+Install Git and Rustup. The repository pins its Rust toolchain and the `wasm32-unknown-unknown` target in [rust-toolchain.toml](../rust-toolchain.toml). Install the native compiler tools for your platform:
+
+| Platform | Source build tools |
+| --- | --- |
+| Windows x64 | Visual Studio Build Tools with the MSVC C++ toolchain and Windows SDK, including `rc.exe` |
+| Linux | Native C compiler and archiver |
+| macOS | Xcode command line tools |
+
+Building installers requires additional tools listed in [packaging](packaging.md). They are not required to run from source.
 
 Clone the repository and enter its directory:
 
@@ -25,7 +33,7 @@ git clone https://github.com/FluryWaana/atelier.git
 cd atelier
 ```
 
-With Rustup and the native compiler tools installed, prepare the build tools from the repository root:
+Prepare the pinned Rust toolchain and UI tools from the repository root. Keep Cargo's binary directory in your PATH so `trunk` and `wasm-bindgen` are available:
 
 ```sh
 rustup show
