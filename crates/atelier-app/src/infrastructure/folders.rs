@@ -265,6 +265,8 @@ fn native() -> Result<Option<String>> {
         .collect();
     let mut display = vec![0u16; 32768];
     let info = BROWSEINFOW {
+        // An owned dialog follows the active browser's monitor instead of the primary display.
+        hwndOwner: unsafe { windows_sys::Win32::UI::WindowsAndMessaging::GetForegroundWindow() },
         pszDisplayName: display.as_mut_ptr(),
         lpszTitle: title.as_ptr(),
         ulFlags: BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE | BIF_EDITBOX | BIF_NONEWFOLDERBUTTON,
