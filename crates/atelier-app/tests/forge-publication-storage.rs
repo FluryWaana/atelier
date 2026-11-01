@@ -1,4 +1,3 @@
-#![cfg(windows)]
 use atelier_app::infrastructure::{
     backups::BackupDirectory, database::Database, forge_draft, forge_publication as workflow,
     store::Documents,

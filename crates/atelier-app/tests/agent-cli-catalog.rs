@@ -1,4 +1,3 @@
-#![cfg(windows)]
 use atelier_app::infrastructure::agent_cli::Catalog;
 use axum::{
     Router,

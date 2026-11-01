@@ -739,7 +739,7 @@
         ],
         "status": "doing",
         "createdAt": "created",
-        "updatedAt": "old",
+        "updatedAt": "now",
         "unknown": {
           "keep": "\u00e9"
         }
@@ -762,14 +762,15 @@
         ],
         "status": "doing",
         "createdAt": "created",
-        "updatedAt": "old",
+        "updatedAt": "now",
         "unknown": {
           "keep": "\u00e9"
         }
       },
       "events": [
+        "timestamp",
         [
-          "launch",
+          "put",
           {
             "id": "card",
             "title": "Title \u00e9",
@@ -786,17 +787,12 @@
                 "done": false
               }
             ],
-            "status": "todo",
+            "status": "doing",
             "createdAt": "created",
-            "updatedAt": "old",
+            "updatedAt": "now",
             "unknown": {
               "keep": "\u00e9"
             }
-          },
-          {
-            "agent": "codex",
-            "mode": "edit",
-            "instructions": ""
           }
         ],
         "sync"
@@ -1383,7 +1379,7 @@
         ],
         "status": "doing",
         "createdAt": "created",
-        "updatedAt": "old",
+        "updatedAt": "now",
         "unknown": {
           "keep": "\u00e9"
         }
@@ -1406,14 +1402,15 @@
         ],
         "status": "doing",
         "createdAt": "created",
-        "updatedAt": "old",
+        "updatedAt": "now",
         "unknown": {
           "keep": "\u00e9"
         }
       },
       "events": [
+        "timestamp",
         [
-          "launch",
+          "put",
           {
             "id": "card",
             "title": "Changed",
@@ -1430,110 +1427,16 @@
                 "done": false
               }
             ],
-            "status": "todo",
+            "status": "doing",
             "createdAt": "created",
-            "updatedAt": "old",
+            "updatedAt": "now",
             "unknown": {
               "keep": "\u00e9"
             }
-          },
-          {
-            "agent": "codex",
-            "mode": "edit",
-            "instructions": ""
           }
         ],
         "invalidate",
         "sync"
-      ]
-    }
-  },
-  {
-    "body": {
-      "title": "Changed",
-      "status": "doing"
-    },
-    "launchError": true,
-    "card": {
-      "id": "card",
-      "title": "Title \u00e9",
-      "description": "Description",
-      "instructions": "",
-      "repo": "old",
-      "agent": "codex",
-      "model": "model",
-      "effort": "high",
-      "mode": "edit",
-      "checklist": [
-        {
-          "text": "\u00e8",
-          "done": false
-        }
-      ],
-      "status": "todo",
-      "createdAt": "created",
-      "updatedAt": "old",
-      "unknown": {
-        "keep": "\u00e9"
-      }
-    },
-    "expected": {
-      "error": "Synthetic launch failure",
-      "saved": {
-        "id": "card",
-        "title": "Title \u00e9",
-        "description": "Description",
-        "instructions": "",
-        "repo": "old",
-        "agent": "codex",
-        "model": "model",
-        "effort": "high",
-        "mode": "edit",
-        "checklist": [
-          {
-            "text": "\u00e8",
-            "done": false
-          }
-        ],
-        "status": "todo",
-        "createdAt": "created",
-        "updatedAt": "old",
-        "unknown": {
-          "keep": "\u00e9"
-        }
-      },
-      "events": [
-        [
-          "launch",
-          {
-            "id": "card",
-            "title": "Changed",
-            "description": "Description",
-            "instructions": "",
-            "repo": "old",
-            "agent": "codex",
-            "model": "model",
-            "effort": "high",
-            "mode": "edit",
-            "checklist": [
-              {
-                "text": "\u00e8",
-                "done": false
-              }
-            ],
-            "status": "todo",
-            "createdAt": "created",
-            "updatedAt": "old",
-            "unknown": {
-              "keep": "\u00e9"
-            }
-          },
-          {
-            "agent": "codex",
-            "mode": "edit",
-            "instructions": ""
-          }
-        ]
       ]
     }
   },
@@ -1569,32 +1472,7 @@
       }
     },
     "expected": {
-      "value": {
-        "id": "card",
-        "title": "Title \u00e9",
-        "description": "Description",
-        "instructions": "",
-        "repo": "old",
-        "agent": "codex",
-        "model": "model",
-        "effort": "high",
-        "mode": "edit",
-        "checklist": [
-          {
-            "text": "\u00e8",
-            "done": false
-          }
-        ],
-        "status": "todo",
-        "createdAt": "created",
-        "updatedAt": "now",
-        "unknown": {
-          "keep": "\u00e9"
-        },
-        "ticket": {
-          "key": "TEST-1"
-        }
-      },
+      "error": "message.this_card_is_linked_to_an_issue_reload_the_task_before_editing_i",
       "saved": {
         "id": "card",
         "title": "Title \u00e9",
@@ -1613,7 +1491,7 @@
         ],
         "status": "todo",
         "createdAt": "created",
-        "updatedAt": "now",
+        "updatedAt": "old",
         "unknown": {
           "keep": "\u00e9"
         },
@@ -1621,38 +1499,7 @@
           "key": "TEST-1"
         }
       },
-      "events": [
-        "timestamp",
-        [
-          "put",
-          {
-            "id": "card",
-            "title": "Title \u00e9",
-            "description": "Description",
-            "instructions": "",
-            "repo": "old",
-            "agent": "codex",
-            "model": "model",
-            "effort": "high",
-            "mode": "edit",
-            "checklist": [
-              {
-                "text": "\u00e8",
-                "done": false
-              }
-            ],
-            "status": "todo",
-            "createdAt": "created",
-            "updatedAt": "now",
-            "unknown": {
-              "keep": "\u00e9"
-            },
-            "ticket": {
-              "key": "TEST-1"
-            }
-          }
-        ]
-      ]
+      "events": []
     }
   },
   {
@@ -1688,37 +1535,12 @@
       }
     },
     "expected": {
-      "value": {
-        "id": "card",
-        "title": "Title \u00e9",
-        "description": "Description",
-        "instructions": "Keep",
-        "repo": "old",
-        "agent": "codex",
-        "model": "model",
-        "effort": "high",
-        "mode": "edit",
-        "checklist": [
-          {
-            "text": "\u00e8",
-            "done": false
-          }
-        ],
-        "status": "todo",
-        "createdAt": "created",
-        "updatedAt": "now",
-        "unknown": {
-          "keep": "\u00e9"
-        },
-        "ticket": {
-          "key": "TEST-1"
-        }
-      },
+      "error": "message.this_card_is_linked_to_an_issue_reload_the_task_before_editing_i",
       "saved": {
         "id": "card",
         "title": "Title \u00e9",
         "description": "Description",
-        "instructions": "Keep",
+        "instructions": "",
         "repo": "old",
         "agent": "codex",
         "model": "model",
@@ -1732,7 +1554,7 @@
         ],
         "status": "todo",
         "createdAt": "created",
-        "updatedAt": "now",
+        "updatedAt": "old",
         "unknown": {
           "keep": "\u00e9"
         },
@@ -1740,39 +1562,7 @@
           "key": "TEST-1"
         }
       },
-      "events": [
-        "timestamp",
-        [
-          "put",
-          {
-            "id": "card",
-            "title": "Title \u00e9",
-            "description": "Description",
-            "instructions": "Keep",
-            "repo": "old",
-            "agent": "codex",
-            "model": "model",
-            "effort": "high",
-            "mode": "edit",
-            "checklist": [
-              {
-                "text": "\u00e8",
-                "done": false
-              }
-            ],
-            "status": "todo",
-            "createdAt": "created",
-            "updatedAt": "now",
-            "unknown": {
-              "keep": "\u00e9"
-            },
-            "ticket": {
-              "key": "TEST-1"
-            }
-          }
-        ],
-        "invalidate"
-      ]
+      "events": []
     }
   },
   {
@@ -4041,7 +3831,7 @@
     },
     "card": {
       "id": "card",
-      "title": "Title é",
+      "title": "Title \u00e9",
       "description": "Description",
       "instructions": "",
       "repo": "old",
@@ -4051,7 +3841,7 @@
       "mode": "edit",
       "checklist": [
         {
-          "text": "è",
+          "text": "\u00e8",
           "done": false
         }
       ],
@@ -4059,14 +3849,14 @@
       "createdAt": "created",
       "updatedAt": "old",
       "unknown": {
-        "keep": "é"
+        "keep": "\u00e9"
       }
     },
     "expected": {
       "error": "message.invalid_or_overly_long_text",
       "saved": {
         "id": "card",
-        "title": "Title é",
+        "title": "Title \u00e9",
         "description": "Description",
         "instructions": "",
         "repo": "old",
@@ -4076,7 +3866,7 @@
         "mode": "edit",
         "checklist": [
           {
-            "text": "è",
+            "text": "\u00e8",
             "done": false
           }
         ],
@@ -4084,13 +3874,12 @@
         "createdAt": "created",
         "updatedAt": "old",
         "unknown": {
-          "keep": "é"
+          "keep": "\u00e9"
         }
       },
       "events": []
     }
-  }
-,
+  },
   {
     "body": {
       "branch": " branch ",

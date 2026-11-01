@@ -10,13 +10,14 @@ Run from the repository root with the committed toolchain and lockfile:
 cargo fmt --all -- --check
 cargo clippy --workspace --exclude atelier-ui --all-targets --locked -- -D warnings
 cargo test --workspace --exclude atelier-ui --locked
+cargo test -p atelier-ui --locked
 cargo clippy -p atelier-ui --target wasm32-unknown-unknown --all-targets --locked -- -D warnings
 cargo check -p atelier-ui --target wasm32-unknown-unknown --locked
 cargo fetch --locked
 cargo xtask build-ui
 ```
 
-Use a separate `CARGO_TARGET_DIR` when another development process owns build outputs. Native and WebAssembly checks are separate because the UI targets `wasm32-unknown-unknown`.
+Use a separate `CARGO_TARGET_DIR` when another development process owns build outputs. Native UI tests cover pure presentation rules. WebAssembly checks and browser journeys cover the browser interface. Set `CARGO_BUILD_JOBS=2` if parallel compilation exceeds the machine's available memory.
 
 ## Browser journeys
 

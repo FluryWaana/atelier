@@ -96,7 +96,7 @@ fn task_agent_preferences_are_conflict_checked_and_reset_options_on_profile_chan
 }
 
 #[test]
-fn unchanged_edit_vectors_preserve_validation_and_review_invalidation() {
+fn task_edits_preserve_validation_and_review_invalidation() {
     let cases: Vec<Document> =
         serde_json::from_str(include_str!("fixtures/rust-task-editing-reference.json")).unwrap();
     assert!(cases.len() >= 60);
@@ -107,33 +107,6 @@ fn unchanged_edit_vectors_preserve_validation_and_review_invalidation() {
         };
         let mut saved = context.scenario.get::<Card>("card").unwrap().unwrap();
         let body = context.scenario.get::<Document>("body").unwrap().unwrap();
-        // Linked ticket text is now changed only by its explicit refresh use case.
-        // Keep the historical vectors intact, while checking this intentional rebuild contract.
-        if !context.scenario.flag("missing").unwrap()
-            && saved.fields.has_object("ticket").unwrap()
-            && (body.raw("title").is_some() || body.raw("description").is_some())
-        {
-            let error = task_editing::prepare(
-                &context,
-                &saved,
-                &body,
-                context.scenario.flag("busy").unwrap(),
-            )
-            .err()
-            .expect("Linked ticket text must not be edited locally");
-            assert_eq!(
-                error.to_string(),
-                "message.this_card_is_linked_to_an_issue_reload_the_task_before_editing_i"
-            );
-            assert!(context.events.borrow().is_empty());
-            continue;
-        }
-        // The rebuild deliberately separates manual status changes from agent execution.
-        if body.get::<String>("status").ok().flatten().as_deref() == Some("doing")
-            && !saved.fields.string_equals("status", "doing").unwrap()
-        {
-            continue;
-        }
         let result = (|| -> Result<Card> {
             if context.scenario.flag("missing")? {
                 return Err(CardFailure::Missing.into());

@@ -39,11 +39,11 @@ fn global_jira_mappings_require_exact_mapping_and_connection_preconditions() {
 }
 
 #[test]
-fn historical_settings_preserve_credentials_unicode_fields_and_validation_order() {
+fn settings_preserve_credentials_unicode_fields_and_validation_order() {
     let reference: Document =
         serde_json::from_str(include_str!("fixtures/rust-settings-reference.json")).unwrap();
     let mut defaults: Document = reference.get("defaults").unwrap().unwrap();
-    // Generic integration defaults extend the current contract, not the historical fixture.
+    // Integration defaults are checked separately from these settings scenarios.
     defaults.set("ticketProvider", &"local").unwrap();
     defaults.set("timeProvider", &"local").unwrap();
     let cases: Vec<Document> = reference.get("cases").unwrap().unwrap();

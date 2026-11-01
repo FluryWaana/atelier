@@ -2572,7 +2572,8 @@ async fn project_routes_serialize_duplicates_guard_timers_and_roll_back_archival
 }
 
 #[tokio::test]
-async fn edits_invalidate_reviews_atomically_preserve_guards_and_refuse_unported_effects() {
+async fn edits_invalidate_reviews_atomically_preserve_guards_and_refuse_unavailable_ticket_transitions()
+ {
     use atelier_app::infrastructure::store::Documents;
     use atelier_core::{contracts::Board, document::Document};
     let data = tempfile::tempdir().unwrap();
@@ -3583,7 +3584,7 @@ async fn dropping_database_drains_an_accepted_write_after_caller_cancellation() 
 
 #[test]
 fn session_tokens_and_constant_time_comparison_reject_malformed_values() {
-    // Generated with the existing Node sessionProof, not with this Rust implementation.
+    // Independent HMAC reference vector.
     assert_eq!(
         session::proof(&"a".repeat(64), &"b".repeat(64), 4318).unwrap(),
         "1ae8821520411244274c996fe46f3a9ee07c312cc03462a73e34a72c949d7bfb"

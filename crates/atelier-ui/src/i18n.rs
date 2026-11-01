@@ -152,21 +152,6 @@ impl I18n {
 mod tests {
     use super::{two_arguments, worktree_parts};
 
-    #[cfg(target_arch = "wasm32")]
-    #[test]
-    fn dates_follow_the_selected_language_without_time() {
-        use leptos::prelude::*;
-        Owner::new().with(|| {
-            let language = RwSignal::new("fr-FR");
-            let i18n = super::I18n(language);
-            let date = js_sys::Date::new_with_year_month_day_hr_min_sec(2026, 9, 29, 14, 35, 42);
-            assert_eq!(i18n.date(date.get_time()), "29/10/2026");
-            language.set("en-US");
-            assert_eq!(i18n.date(date.get_time()), "10/29/2026");
-            assert_eq!(i18n.date(f64::NAN), i18n.text("message.unavailable"));
-        });
-    }
-
     #[test]
     fn worktree_error_keeps_the_role_and_full_cause() {
         assert_eq!(

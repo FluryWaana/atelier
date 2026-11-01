@@ -5,7 +5,7 @@ use std::cell::RefCell;
 mod json;
 
 #[test]
-fn historical_project_detection_preserves_sources_drafts_roles_caching_and_unicode() {
+fn project_detection_preserves_sources_drafts_roles_caching_and_unicode() {
     let fixture: Document = serde_json::from_str(include_str!(
         "fixtures/rust-project-detection-reference.json"
     ))

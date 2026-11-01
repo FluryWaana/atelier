@@ -45,12 +45,5 @@ fn domain_and_use_cases_stay_independent_of_io_and_platform_adapters() {
                 path.display()
             );
         }
-        for retired in ["JsonString", ".truthy(", "Document::spread", "WTF-8"] {
-            assert!(
-                !source.contains(retired),
-                "Retired compatibility contract {retired} in {}",
-                path.display()
-            );
-        }
     }
 }

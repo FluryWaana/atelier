@@ -216,7 +216,7 @@ impl ProjectRepository for Context {
 }
 
 #[test]
-fn historical_project_lifecycle_preserves_guards_unicode_archive_scope_and_rollback() {
+fn project_lifecycle_preserves_guards_unicode_archive_scope_and_rollback() {
     let cases: Vec<Document> = serde_json::from_str(include_str!(
         "fixtures/rust-project-lifecycle-reference.json"
     ))
@@ -232,11 +232,6 @@ fn historical_project_lifecycle_preserves_guards_unicode_archive_scope_and_rollb
         let previous_projects = context.projects.borrow().clone();
         let previous_cards = context.cards.borrow().clone();
         let body = context.scenario.get::<Document>("body").unwrap().unwrap();
-        // Renaming is now supported; the former ignored-name contract is retired below.
-        if context.scenario.string_equals("action", "update").unwrap() && body.raw("name").is_some()
-        {
-            continue;
-        }
         let active: Vec<String> = context.scenario.get("active").unwrap().unwrap_or_default();
         let busy = |id: &str| active.iter().any(|active| active == id);
         let windows = context.scenario.flag("windows").unwrap();

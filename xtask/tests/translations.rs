@@ -13,25 +13,18 @@ fn translation_catalogs_cover_explicit_keys_and_placeholders() {
     assert!(french.values().all(|message| !message.trim().is_empty()));
     assert!(catalog.values().all(|message| !message.trim().is_empty()));
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../crates");
-    for directory in [
-        "atelier-ui/src",
-        "atelier-app/src",
-        "atelier-app/src/http",
-        "atelier-app/src/infrastructure",
-        "atelier-app/src/infrastructure/forge",
-        "atelier-app/src/infrastructure/tempo",
-        "atelier-core/src",
-        "atelier-core/src/application",
-        "atelier-core/src/application/agent_protocol",
-        "atelier-core/src/domain",
-    ] {
-        if directory == "atelier-core/src/application/agent_protocol"
-            && !root.join(directory).is_dir()
-        {
-            continue;
-        }
-        for entry in std::fs::read_dir(root.join(directory)).unwrap() {
+    let mut directories = vec![
+        root.join("atelier-ui/src"),
+        root.join("atelier-app/src"),
+        root.join("atelier-core/src"),
+    ];
+    while let Some(directory) = directories.pop() {
+        for entry in std::fs::read_dir(directory).unwrap() {
             let path = entry.unwrap().path();
+            if path.is_dir() {
+                directories.push(path);
+                continue;
+            }
             if path.extension().is_none_or(|extension| extension != "rs") {
                 continue;
             }

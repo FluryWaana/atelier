@@ -611,6 +611,47 @@ async fn diagnostics_scenario(client: &Client, http: &reqwest::Client) -> Result
     http.post(format!("{address}/api/agent-providers")).bearer_auth(&token).header("x-local-request", "1")
         .json(&json!({"id":"diagnostic-command","name":"Diagnostic synthétique","type":"command","auth":"cli","command":fixture,"analyzeArgs":["invalid-synthetic-command"],"expected":null}))
         .send().await?.checked_status().await?;
+    for (language, observed, expected) in [
+        ("fr-FR", "2026-10-29T14:35:42", "29/10/2026"),
+        ("en-US", "2026-10-29T14:35:42", "10/29/2026"),
+        ("fr-FR", "invalid-date", "Indisponible"),
+    ] {
+        client
+            .execute(
+                "localStorage.setItem('atelier-language', arguments[0]);",
+                vec![json!(language)],
+            )
+            .await?;
+        client.refresh().await?;
+        wait_dom(client, "return document.documentElement.lang === arguments[0] && document.querySelector('#prototype-board')?.getAttribute('aria-busy') === 'false';", vec![json!(language)]).await?;
+        // Override only the synthetic report date so locale checks do not depend on today's date.
+        client.execute(r#"
+            const observed = arguments[0];
+            window.__atelierDateFetch = window.fetch;
+            window.fetch = async (...args) => {
+                const response = await window.__atelierDateFetch(...args);
+                const url = typeof args[0] === 'string' ? args[0] : args[0].url;
+                if (!new URL(url, location.href).pathname.endsWith('/diagnostic-command/diagnose') || !response.ok) return response;
+                const diagnostic = await response.json();
+                diagnostic.accountReport = {state:'available', account:null, subscription:null, windows:[], observedAt:observed, retryAt:null};
+                return new Response(JSON.stringify(diagnostic), {status:200, headers:{'content-type':'application/json'}});
+            };
+        "#, vec![json!(observed)]).await?;
+        let checked = async {
+            click(client, "#manage-agents").await?;
+            wait_dom(client, "return !!document.querySelector('[data-profile=diagnostic-command]');", vec![]).await?;
+            click(client, "[data-profile=diagnostic-command]").await?;
+            wait_dom(client, "return document.querySelector('#agent-account-observed')?.textContent === arguments[0] && document.querySelector('#diagnose-profile')?.disabled === false;", vec![json!(expected)]).await?;
+            click(client, "#close-agents").await
+        }.await;
+        client
+            .execute(
+                "window.fetch=window.__atelierDateFetch;delete window.__atelierDateFetch;",
+                vec![],
+            )
+            .await?;
+        checked?;
+    }
     let card: atelier_core::contracts::Card = http
         .post(format!("{address}/api/brainstorms"))
         .bearer_auth(&token)

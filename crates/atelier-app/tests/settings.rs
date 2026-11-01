@@ -2,7 +2,7 @@ use atelier_app::infrastructure::settings::jira_base;
 use atelier_core::document::Document;
 
 #[test]
-fn historical_jira_urls_preserve_normalization_and_refusals() {
+fn jira_urls_preserve_normalization_and_refusals() {
     let cases: Vec<Document> =
         serde_json::from_str(include_str!("fixtures/rust-jira-url-reference.json")).unwrap();
     assert!(cases.len() >= 20);

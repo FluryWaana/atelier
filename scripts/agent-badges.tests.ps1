@@ -105,12 +105,12 @@ try {
   }
   $deadline=[DateTime]::UtcNow.AddSeconds(60)
   do {
-    $result=Driver-Request POST "/session/$sessionId/execute/sync" @{script="return Array.from(document.querySelectorAll('.agent-row')).filter(e=>e.textContent.includes('Claude')).map(e=>{const dot=e.querySelector('.online-dot'),name=e.querySelector('strong');return {green:dot.classList.contains('agent-status-online'),color:getComputedStyle(dot).backgroundColor,before:!!(dot.compareDocumentPosition(name)&Node.DOCUMENT_POSITION_FOLLOWING),aligned:Math.abs((dot.getBoundingClientRect().top+dot.getBoundingClientRect().height/2)-(name.getBoundingClientRect().top+name.getBoundingClientRect().height/2))<3};});";args=@()}
+    $result=Driver-Request POST "/session/$sessionId/execute/sync" @{script="return Array.from(document.querySelectorAll('.agent-row')).filter(e=>e.textContent.includes('Claude')).map(e=>{const dot=e.querySelector('.online-dot'),name=e.querySelector('strong'),theme=document.createElement('span');theme.style.backgroundColor='var(--green)';e.append(theme);const expected=getComputedStyle(theme).backgroundColor;theme.remove();return {green:dot.classList.contains('agent-status-online'),color:getComputedStyle(dot).backgroundColor,themed:getComputedStyle(dot).backgroundColor===expected,before:!!(dot.compareDocumentPosition(name)&Node.DOCUMENT_POSITION_FOLLOWING),aligned:Math.abs((dot.getBoundingClientRect().top+dot.getBoundingClientRect().height/2)-(name.getBoundingClientRect().top+name.getBoundingClientRect().height/2))<3};});";args=@()}
     if (@($result).Count -eq 2 -and @($result | Where-Object { !$_.green }).Count -eq 0) { break }
     Start-Sleep -Milliseconds 300
   } while ([DateTime]::UtcNow -lt $deadline)
   if (@($result).Count -ne 2) { throw 'Both Claude profiles were not rendered' }
-  foreach ($row in $result) { if (!$row.green -or !$row.before -or !$row.aligned -or $row.color -ne 'rgb(140, 203, 176)') { throw ('Badge assertion failed: '+($row|ConvertTo-Json -Compress)) } }
+  foreach ($row in $result) { if (!$row.green -or !$row.before -or !$row.aligned -or !$row.themed) { throw ('Badge assertion failed: '+($row|ConvertTo-Json -Compress)) } }
   $profiles=Invoke-RestMethod -Uri "$address/api/agent-providers" -Headers $headers
   $profile=@($profiles | Where-Object id -eq 'claude-extra')[0]
   $change=@{id=$profile.id;name=$profile.name;type='claude';auth='cli';command=(Join-Path $root 'missing.exe');configDir=$config;expected=$profile}

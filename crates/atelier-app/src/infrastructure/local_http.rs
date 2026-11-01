@@ -305,7 +305,10 @@ mod tests {
             )
             .await
             .unwrap();
-            let listener = server.await.unwrap();
+            let listener = tokio::time::timeout(std::time::Duration::from_secs(5), server)
+                .await
+                .expect("Synthetic health server did not receive both requests")
+                .unwrap();
             assert!(
                 tokio::time::timeout(std::time::Duration::from_millis(50), listener.accept())
                     .await

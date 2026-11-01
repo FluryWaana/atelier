@@ -1,4 +1,4 @@
-name: Rust rebuild
+name: Rust verification
 on:
   # Manual only; corrective checks select one family/browser/journey.
   workflow_dispatch:
@@ -32,7 +32,7 @@ permissions:
 env:
   ATELIER_RUST_FINAL_CAMPAIGN: '1'
 concurrency:
-  group: rust-migration-${{ github.ref }}-${{ inputs.scope }}-${{ inputs.platform }}-${{ inputs.full_matrix }}-${{ inputs.browser }}-${{ inputs.journey }}
+  group: rust-verification-${{ github.ref }}-${{ inputs.scope }}-${{ inputs.platform }}-${{ inputs.full_matrix }}-${{ inputs.browser }}-${{ inputs.journey }}
   cancel-in-progress: true
 jobs:
   selection:
@@ -102,7 +102,8 @@ jobs:
             target
           key: rust-checks-v1-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: rust-checks-v1-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-
-      - run: cargo clippy -p atelier-ui --target wasm32-unknown-unknown --locked -- -D warnings
+      - run: cargo test -p atelier-ui --locked
+      - run: cargo clippy -p atelier-ui --target wasm32-unknown-unknown --all-targets --locked -- -D warnings
       - run: cargo check -p atelier-ui --target wasm32-unknown-unknown --locked
         if: ${{ !cancelled() }}
       - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4

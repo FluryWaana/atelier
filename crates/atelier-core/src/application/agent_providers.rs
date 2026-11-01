@@ -398,7 +398,7 @@ mod tests {
     }
 
     #[test]
-    fn profile_limits_and_api_key_validation_keep_historical_error_order() {
+    fn profile_limits_and_api_key_validation_preserve_error_precedence() {
         let profiles: Vec<_> = (0..50)
             .map(|index| json!({"id":format!("p{index}"),"type":"codex"}))
             .collect();

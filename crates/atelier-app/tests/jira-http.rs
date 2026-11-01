@@ -185,9 +185,32 @@ async fn local_doubles_cover_authentication_pagination_redirects_limits_and_secr
                 .expect("Synthetic malformed response must fail")
                 .to_string();
             assert!(!message.contains("synthetic-token"));
-            if mode == "redirect" {
-                assert_eq!(calls.load(Ordering::SeqCst), 1);
-            }
+            let expected = match mode {
+                "duplicate" | "cycle" => {
+                    "message.jira_pagination_is_inconsistent_try_the_search_again"
+                }
+                "invalid-end" => "message.invalid_jira_cursor",
+                "unauthorized" | "forbidden" => {
+                    "message.jira_denied_access_check_the_account_permissions_and_token"
+                }
+                "rate-limit" => "message.jira_rate_limit_reached_wait_before_trying_again",
+                "redirect" => "message.jira_redirect_refused_check_the_configured_address",
+                "oversized" => "message.jira_response_is_invalid_or_too_large",
+                "chunked" => "message.jira_response_is_too_large",
+                "invalid-json" => "message.invalid_jira_json_response",
+                "secret" => "message.the_jira_response_contains_unexpected_confidential_data",
+                _ => unreachable!("Unknown malformed response: {mode}"),
+            };
+            assert_eq!(message, expected, "{mode}");
+            assert_eq!(
+                calls.load(Ordering::SeqCst),
+                if matches!(mode, "duplicate" | "cycle") {
+                    2
+                } else {
+                    1
+                },
+                "{mode}"
+            );
         }
         server.abort();
         let _ = server.await;

@@ -2979,7 +2979,7 @@
   {
     "action": "update",
     "body": {
-      "name": "ignored",
+      "name": "Renamed project",
       "unknown": "ignored"
     },
     "projects": [
@@ -3016,7 +3016,7 @@
     "expected": {
       "value": {
         "id": "project",
-        "name": "\u00e9",
+        "name": "Renamed project",
         "repo": "checked:repo",
         "unknown": {
           "keep": "\u00e8"
@@ -3050,7 +3050,7 @@
       "projects": [
         {
           "id": "project",
-          "name": "\u00e9",
+          "name": "Renamed project",
           "repo": "checked:repo",
           "unknown": {
             "keep": "\u00e8"

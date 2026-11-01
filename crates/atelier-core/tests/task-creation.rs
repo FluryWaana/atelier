@@ -97,7 +97,7 @@ impl CreationContext for Context {
 }
 
 #[test]
-fn historical_task_creation_preserves_fields_unicode_and_validation_order() {
+fn task_creation_preserves_fields_unicode_and_validation_order() {
     let cases: Vec<Document> =
         serde_json::from_str(include_str!("fixtures/rust-task-creation-reference.json")).unwrap();
     assert!(cases.len() >= 70);
