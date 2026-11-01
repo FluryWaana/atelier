@@ -1344,10 +1344,10 @@ async fn updates_scenario(
         click(client,"#apply-update").await.map_err(|error|format!("Updates : clic natif d’activation : {error:?}").replace(&token,"[session]").chars().take(2000).collect::<String>())?;
         let deadline=Instant::now()+Duration::from_secs(120);
         loop {
-            let state=updates::status(Some(&installation))?.operation.ok_or("Journal navigateur absent.")?.state;
-            if state==Phase::RolledBack { break; }
-            if !state.pending() { return Err("La mauvaise version n’a pas déclenché une récupération navigateur.".into()); }
-            if Instant::now()>=deadline { return Err("Récupération navigateur trop longue.".into()); }
+            let operation=updates::status(Some(&installation))?.operation.ok_or("Journal navigateur absent.")?;
+            if operation.state==Phase::RolledBack { break; }
+            if operation.state==Phase::Uncertain || !operation.state.pending() { return Err(format!("Récupération navigateur interrompue ({:?}) : {}",operation.state,operation.message).into()); }
+            if Instant::now()>=deadline { return Err(format!("Récupération navigateur trop longue ({:?}) : {}",operation.state,operation.message).into()); }
             tokio::time::sleep(Duration::from_millis(100)).await;
         }
         let next=session::read(&data)?;if next==token{return Err("La session n’a pas été renouvelée après récupération.".into());}
@@ -1363,10 +1363,15 @@ async fn updates_scenario(
         Ok::<(),Box<dyn std::error::Error+Send+Sync>>(())
     }.await;
     if result.is_err() {
-        let phase = updates::status(Some(&installation))
+        let operation = updates::status(Some(&installation))
             .ok()
-            .and_then(|status| status.operation.map(|operation| operation.state));
-        eprintln!("Updates : phase du journal avant nettoyage synthétique : {phase:?}");
+            .and_then(|status| status.operation);
+        if let Some(operation) = operation {
+            eprintln!(
+                "Updates : journal avant nettoyage synthétique ({:?}) : {}",
+                operation.state, operation.message
+            );
+        }
     }
     let stopped = crate::update_flow::stop_fixture(&installation, &data, port).await;
     if let Err(error) = &stopped {

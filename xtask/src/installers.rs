@@ -15,7 +15,7 @@ fn deb_control(version: &str, architecture: &str) -> String {
 }
 fn rpm_spec(version: &str, deb: &Path) -> String {
     format!(
-        "Name: atelier-kanban-rust\nVersion: {version}\nRelease: 1\nSummary: Local Kanban workspace\nLicense: AGPL-3.0-or-later\nRequires: libsecret, xdg-utils, zenity, util-linux, procps-ng\nRequires(post): procps-ng\n%global __os_install_post %{{nil}}\n%description\nNative Rust application; signed runtime state and user data are retained safely.\n%install\nmkdir -p \"%{{buildroot}}\"\ncp -a \"{}/usr\" \"%{{buildroot}}/\"\n%pre\n{PRE}\n%post\n{INSTALL}\n%preun\n{REMOVE}\n%postun\n{POST}\n%files\n%defattr(-,root,root,-)\n/usr/lib/atelier-kanban-rust\n/usr/bin/atelier-kanban-rust\n/usr/share/applications/atelier-kanban-rust.desktop\n/usr/share/doc/atelier-kanban-rust\n",
+        "Name: atelier-kanban-rust\nVersion: {version}\nRelease: 1\nSummary: Local Kanban workspace\nLicense: AGPL-3.0-or-later\nRequires: libsecret, xdg-utils, zenity, util-linux, procps-ng\nRequires(post): procps-ng\n%global __os_install_post %{{nil}}\n%description\nNative Rust application; signed runtime state and user data are retained safely.\n%install\nmkdir -p \"%{{buildroot}}\"\ncp -a \"{}/usr\" \"%{{buildroot}}/\"\n%pre\n{PRE}\n%post\n{INSTALL}\n%preun\n{REMOVE}\n%postun\n{POST}\n%files\n%defattr(-,root,root,-)\n/usr/lib/atelier-kanban-rust\n/usr/bin/atelier-kanban-rust\n/usr/share/applications/atelier-kanban-rust.desktop\n/usr/share/icons/hicolor/512x512/apps/atelier-kanban.png\n/usr/share/doc/atelier-kanban-rust\n",
         deb.display()
     )
 }
@@ -360,6 +360,17 @@ pub(super) async fn build(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn rpm_packages_the_desktop_entry_icon() {
+        let icon = include_str!("../packaging/atelier-kanban-rust.desktop")
+            .lines()
+            .find_map(|line| line.strip_prefix("Icon="))
+            .unwrap();
+        let spec = rpm_spec("0.1.11", Path::new("/synthetic/deb"));
+        let (_, files) = spec.split_once("\n%files\n").unwrap();
+        let icon_path = format!("/usr/share/icons/hicolor/512x512/apps/{icon}.png");
+        assert!(files.lines().any(|line| line == icon_path));
+    }
     #[test]
     fn packages_provide_process_inspection_during_installation_and_runtime() {
         for architecture in ["amd64", "arm64"] {

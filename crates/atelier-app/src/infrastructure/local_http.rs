@@ -224,7 +224,7 @@ impl LocalHttp {
         }
         let mut headers = HeaderMap::new();
         headers.insert(AUTHORIZATION, format!("Bearer {token}").parse()?);
-        let response = self
+        let response = match self
             .request(
                 &format!("{address}/api/health"),
                 Method::GET,
@@ -232,7 +232,12 @@ impl LocalHttp {
                 None,
                 Duration::from_secs(2),
             )
-            .await?;
+            .await
+        {
+            Ok(response) => response,
+            Err(error) if disconnected(error.as_ref()) => return Ok(None),
+            Err(error) => return Err(error),
+        };
         if !response.status.is_success() {
             return Err("Session locale refusée. Rouvre Atelier avec son lanceur.".into());
         }
@@ -243,6 +248,76 @@ impl LocalHttp {
 #[cfg(test)]
 mod tests {
     use std::io::{Error, ErrorKind};
+
+    #[tokio::test]
+    async fn authenticated_health_handles_disconnect_after_proof_without_retrying_credentials() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+        async fn headers(stream: &mut tokio::net::TcpStream) -> String {
+            let mut bytes = Vec::new();
+            while !bytes.ends_with(b"\r\n\r\n") {
+                assert!(bytes.len() < 8192);
+                bytes.push(stream.read_u8().await.unwrap());
+            }
+            String::from_utf8(bytes).unwrap()
+        }
+
+        for response in [
+            None,
+            Some(("401 Unauthorized", "{}")),
+            Some(("200 OK", "invalid JSON")),
+        ] {
+            let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let port = listener.local_addr().unwrap().port();
+            let token = "ab".repeat(32);
+            let server_token = token.clone();
+            let server = tokio::spawn(async move {
+                let (mut proof, _) = listener.accept().await.unwrap();
+                let request = headers(&mut proof).await;
+                assert!(!request.contains("authorization:"));
+                let challenge = request
+                    .lines()
+                    .next()
+                    .unwrap()
+                    .strip_prefix("GET /api/health?challenge=")
+                    .unwrap()
+                    .strip_suffix(" HTTP/1.1")
+                    .unwrap();
+                let body = serde_json::json!({"proof": super::session::proof(&server_token, challenge, port).unwrap()}).to_string();
+                proof.write_all(format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len()).as_bytes()).await.unwrap();
+                drop(proof);
+
+                let (mut authenticated, _) = listener.accept().await.unwrap();
+                let request = headers(&mut authenticated).await;
+                assert!(request.starts_with("GET /api/health HTTP/1.1\r\n"));
+                assert!(request.contains(&format!("authorization: Bearer {server_token}\r\n")));
+                if let Some((status, body)) = response {
+                    authenticated.write_all(format!("HTTP/1.1 {status}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len()).as_bytes()).await.unwrap();
+                }
+                drop(authenticated);
+                listener
+            });
+            let result = tokio::time::timeout(
+                std::time::Duration::from_secs(5),
+                super::LocalHttp::new()
+                    .unwrap()
+                    .authenticated_health(&format!("http://127.0.0.1:{port}"), || Ok(Some(token))),
+            )
+            .await
+            .unwrap();
+            let listener = server.await.unwrap();
+            assert!(
+                tokio::time::timeout(std::time::Duration::from_millis(50), listener.accept())
+                    .await
+                    .is_err()
+            );
+            if response.is_none() {
+                assert!(result.unwrap().is_none());
+            } else {
+                assert!(result.is_err());
+            }
+        }
+    }
 
     #[test]
     fn transport_diagnostics_preserve_nested_io_codes_without_error_text_or_unbounded_sources() {
