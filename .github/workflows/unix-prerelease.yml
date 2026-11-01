@@ -1,0 +1,203 @@
+name: Complete Linux and macOS prerelease
+on:
+  workflow_dispatch:
+    inputs:
+      source_run:
+        description: Successful five-platform Rust campaign on the published tag
+        required: true
+        type: string
+      tag:
+        description: Existing prerelease tag to complete without replacing assets
+        required: true
+        default: v0.1.11
+        type: string
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: unix-prerelease
+  cancel-in-progress: false
+jobs:
+  sign-and-qualify:
+    if: github.ref == 'refs/heads/main'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            artifact: Linux-X64
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            artifact: Linux-ARM64
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+            artifact: macOS-X64
+          - os: macos-15
+            target: aarch64-apple-darwin
+            artifact: macOS-ARM64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    outputs:
+      release_commit: ${{ steps.source.outputs.commit }}
+    env:
+      ATELIER_RUST_FINAL_CAMPAIGN: '1'
+      RELEASE_TAG: ${{ inputs.tag }}
+      NATIVE_TARGET: ${{ matrix.target }}
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: refs/tags/${{ inputs.tag }}
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          path: release-control
+          persist-credentials: false
+      - name: Require the five-platform campaign and original release commit
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN: ${{ inputs.source_run }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          commit=$(git rev-parse HEAD)
+          bash release-control/xtask/packaging/verify-unix-release-source.sh "$SOURCE_RUN" "$RELEASE_TAG" "$commit"
+          printf 'commit=%s\n' "$commit" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: rust-preproduction-candidate-${{ matrix.artifact }}
+          path: .artifacts/qualified-source
+          run-id: ${{ inputs.source_run }}
+          github-token: ${{ github.token }}
+      - name: Use canonical disposable temporary paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=$(cd -P "$RUNNER_TEMP" && pwd)
+          fixture=$(mktemp -d "$base/atelier-unix-release-XXXXXXXX")
+          printf 'TMPDIR=%s/\nTMP=%s\nTEMP=%s\n' "$fixture" "$fixture" "$fixture" >> "$GITHUB_ENV"
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/registry
+            target
+          key: unix-prerelease-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+          restore-keys: |
+            rust-delivery-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-
+      - name: Install Linux package builders and isolated keyring tools
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y rpm cpio desktop-file-utils libsecret-tools gnome-keyring dbus-x11
+      - name: Build release tooling without a signing secret
+        run: cargo build --manifest-path release-control/Cargo.toml -p xtask --bin xtask --locked
+      - name: Prepare the exact qualified payload and private regression fixtures
+        shell: bash
+        run: bash release-control/xtask/packaging/release-unix.sh prepare "$NATIVE_TARGET"
+      - name: Sign archives with the distribution key
+        env:
+          RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+        shell: bash
+        run: bash release-control/xtask/packaging/release-unix.sh sign "$NATIVE_TARGET"
+      - name: Verify signatures and build distribution installers
+        shell: bash
+        run: bash release-control/xtask/packaging/release-unix.sh build "$NATIVE_TARGET"
+      - name: Qualify the signed Linux portable in an isolated keyring session
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          fixture=$(mktemp -d "$RUNNER_TEMP/atelier-release-keyring-XXXXXXXX")
+          mkdir -m 700 "$fixture/data" "$fixture/runtime"
+          export XDG_DATA_HOME="$fixture/data" XDG_RUNTIME_DIR="$fixture/runtime"
+          unset GNOME_KEYRING_CONTROL DISPLAY WAYLAND_DISPLAY
+          dbus-run-session -- bash -euo pipefail -c '
+            printf "%s" synthetic-release-keyring-password | gnome-keyring-daemon --unlock --components=secrets
+            bash release-control/xtask/packaging/release-unix.sh portable "$NATIVE_TARGET"
+          '
+      - name: Qualify the signed macOS portable with a dedicated disposable keychain
+        if: runner.os == 'macOS'
+        shell: bash
+        run: bash xtask/packaging/with-macos-keychain.sh bash release-control/xtask/packaging/release-unix.sh portable "$NATIVE_TARGET"
+      - name: Qualify the distribution DEB with its native manager
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          delivery="$GITHUB_WORKSPACE/.artifacts/unix-release-work"
+          docker run --rm -e CI=true -e ATELIER_RUST_FINAL_CAMPAIGN=1 -v "$GITHUB_WORKSPACE:/workspace:ro" -v "$delivery:/delivery:ro" -v "$delivery:/results" ubuntu:24.04 sh /workspace/xtask/packaging/qualify-linux.sh deb
+      - name: Qualify the distribution RPM with its native manager
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          delivery="$GITHUB_WORKSPACE/.artifacts/unix-release-work"
+          docker run --rm -e CI=true -e ATELIER_RUST_FINAL_CAMPAIGN=1 -v "$GITHUB_WORKSPACE:/workspace:ro" -v "$delivery:/delivery:ro" -v "$delivery:/results" fedora:43 sh /workspace/xtask/packaging/qualify-linux.sh rpm
+      - name: Compute target-specific checksums without replacing Windows assets
+        shell: bash
+        run: bash release-control/xtask/packaging/release-unix.sh checksums "$NATIVE_TARGET"
+      - name: Sign the target checksums
+        env:
+          RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+        shell: bash
+        run: bash release-control/xtask/packaging/release-unix.sh sign-checksums "$NATIVE_TARGET"
+      - name: Verify signatures and every distribution hash
+        shell: bash
+        run: bash release-control/xtask/packaging/release-unix.sh verify "$NATIVE_TARGET"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: unix-distribution-${{ matrix.target }}
+          path: .artifacts/unix-release-assets/*
+          if-no-files-found: error
+          retention-days: 7
+      # Private signed successors and negative fixtures remain in the disposable runners.
+  publish:
+    needs: sign-and-qualify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: unix-distribution-*
+          merge-multiple: true
+          path: release-assets
+      - name: Add the qualified Unix assets to the existing prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ inputs.tag }}
+          RELEASE_COMMIT: ${{ needs.sign-and-qualify.outputs.release_commit }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          [[ "$RELEASE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          cd release-assets
+          test "$(find . -maxdepth 1 -type f | wc -l)" -eq 20
+          for target in x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu x86_64-apple-darwin aarch64-apple-darwin; do
+            sha256sum --strict --check "SHA256SUMS-$target"
+          done
+          gh api "repos/$GH_REPO/releases/tags/$RELEASE_TAG" > "$RUNNER_TEMP/prerelease.json"
+          jq -e --arg tag "$RELEASE_TAG" '.tag_name == $tag and .prerelease == true and .draft == false and .immutable != true' "$RUNNER_TEMP/prerelease.json" >/dev/null
+          gh api "repos/$GH_REPO/git/ref/tags/$RELEASE_TAG" | jq -e --arg commit "$RELEASE_COMMIT" '.object.type == "commit" and .object.sha == $commit' >/dev/null
+          for file in *; do
+            [[ -f "$file" && ! -L "$file" && "$file" =~ ^[a-zA-Z0-9._-]+$ ]]
+            if jq -e --arg file "$file" '.assets | any(.name == $file)' "$RUNNER_TEMP/prerelease.json" >/dev/null; then
+              echo 'An asset already exists. No published file will be replaced.' >&2
+              exit 1
+            fi
+          done
+          gh release upload "$RELEASE_TAG" ./*
+          cat > "$RUNNER_TEMP/release-notes.txt" <<'NOTES'
+          Prérelease d'Atelier Kanban pour Windows x64, Linux x64 et ARM64, macOS Intel et Apple Silicon.
+
+          Windows fournit le Setup. Linux fournit les DEB et RPM. Chaque cible possède son archive de mise à jour et son manifeste signé. Les paquets, démarrages et scénarios de conservation ont été qualifiés avec des données synthétiques. Les installateurs Windows et Linux ont aussi été testés avec mise à jour, refus de paquets invalides, désinstallation et réinstallation.
+
+          Les archives et les empreintes sont signées avec la clé Ed25519 historique. SHA256SUMS couvre Windows. Les fichiers SHA256SUMS suivis de la cible couvrent Linux et macOS. Chaque signature .sig emploie le préfixe `atelier-kanban-release-checksums/1` suivi d'un saut de ligne, puis les octets exacts du fichier d'empreintes. La clé de confiance publique est atelier-update-public.json et reste épinglée dans l'application.
+
+          Les exécutables Windows ne portent pas de certificat Authenticode. Les applications macOS ne sont pas signées avec Apple Developer ID et ne sont pas notariées. SmartScreen et Gatekeeper peuvent afficher des avertissements. Le format Rust refuse les anciens formats de données non pris en charge. Conservez vos anciennes données séparément.
+
+          Cette prérelease ne remplace pas la release stable et n'est pas proposée par la recherche automatique des mises à jour stables.
+          NOTES
+          gh release edit "$RELEASE_TAG" --prerelease --latest=false --title "Atelier Kanban $RELEASE_TAG preview" --notes-file "$RUNNER_TEMP/release-notes.txt"

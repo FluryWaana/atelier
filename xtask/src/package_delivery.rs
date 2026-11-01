@@ -57,6 +57,12 @@ async fn portable(
         target,
     )?;
     installed::verify_all(&installation, target)?;
+    let current =
+        installed::open(&installation, target)?.ok_or("Installation portable absente.")?;
+    if current.current().active.version != env!("CARGO_PKG_VERSION") {
+        return Err("La version du paquet ne correspond pas à la version à qualifier.".into());
+    }
+    drop(current);
     if installed::install(
         archive,
         signature,
@@ -158,6 +164,87 @@ async fn portable(
     observations["finalStopMs"] = json!(stopping_at.elapsed().as_millis());
     installed::verify_all(&installation, target)?;
     Ok(observations)
+}
+
+fn require_new_output(output: &Path) -> Result<()> {
+    if output.try_exists()? {
+        return Err("Le fichier de sortie existe déjà. Aucun fichier remplacé.".into());
+    }
+    Ok(())
+}
+
+fn release_source(
+    archive: &Path,
+    signature: &Path,
+    trust: &Path,
+    target: &str,
+    temporary: &Path,
+) -> Result<update_package::PreparedUpdate> {
+    let trust = update_package::Trust::load(trust)?;
+    let prepared = update_package::prepare(archive, signature, &trust, target, "0.0.0", temporary)?;
+    if prepared.payload().version != env!("CARGO_PKG_VERSION") {
+        return Err("La source signée ne correspond pas à la version à qualifier.".into());
+    }
+    Ok(prepared)
+}
+
+pub(super) async fn qualify_signed_portable(
+    archive: &Path,
+    signature: &Path,
+    trust: &Path,
+    output: &Path,
+) -> Result<()> {
+    campaign()?;
+    require_new_output(output)?;
+    let target = payload::native_target()?;
+    let temporary = tempfile::tempdir()?;
+    let prepared = release_source(archive, signature, trust, target, temporary.path())?;
+    let observations = portable(archive, signature, trust, temporary.path()).await?;
+    let report = json!({
+        "format":"atelier-rust-signed-portable-qualification/1",
+        "target":target,"version":prepared.payload().version,
+        "archiveSha256":prepared.payload().archive_sha256,
+        "archiveBytes":prepared.payload().archive_size,"keyId":prepared.payload().key_id,
+        "observations":observations,
+        "portable":{"signatureVerified":true,"installationVerified":true,"existingDestinationRefused":true,"nativeLauncherExecuted":true,"runtimeVersionObserved":true,"restartPersistenceObserved":true,"sessionRotated":true,"stopped":true},
+        "syntheticDataOnly":true,"published":false
+    });
+    payload::write(output, &serde_json::to_vec_pretty(&report)?)
+}
+
+pub(super) fn prepare_release_negative(
+    archive: &Path,
+    signature: &Path,
+    trust: &Path,
+    output: &Path,
+) -> Result<()> {
+    campaign()?;
+    prepare_negative(archive, signature, trust, output, payload::native_target()?)
+}
+
+fn prepare_negative(
+    archive: &Path,
+    signature: &Path,
+    trust: &Path,
+    output: &Path,
+    target: &str,
+) -> Result<()> {
+    require_new_output(output)?;
+    let temporary = tempfile::tempdir()?;
+    let prepared = release_source(archive, signature, trust, target, temporary.path())?;
+    let mut parts = payload::version_parts(&prepared.payload().version)?;
+    parts[2] = parts[2]
+        .checked_add(1)
+        .ok_or("Version de fixture excessive.")?;
+    let next = format!("{}.{}.{}", parts[0], parts[1], parts[2]);
+    let directory = prepared.package().path();
+    let manifest = payload::manifest(directory, target, &next)?;
+    // Only this owned extraction changes, leaving the signed source and runtime bytes intact.
+    std::fs::write(
+        directory.join("atelier-package.json"),
+        serde_json::to_vec_pretty(&manifest)?,
+    )?;
+    package_archive::create(directory, output)
 }
 
 pub(super) async fn qualify(output: &Path) -> Result<()> {
@@ -294,6 +381,111 @@ pub(super) async fn qualify(output: &Path) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
+    fn signed_fixture(version: &str) -> tempfile::TempDir {
+        let root = tempfile::tempdir().unwrap();
+        let directory = root.path().join("payload");
+        std::fs::create_dir_all(directory.join("ui")).unwrap();
+        let mut image = vec![0u8; 64];
+        image[..6].copy_from_slice(b"\x7fELF\x02\x01");
+        image[18] = 62;
+        std::fs::write(directory.join("atelier"), image).unwrap();
+        for (name, bytes) in [
+            ("LICENSE", &b"Synthetic license"[..]),
+            ("README.txt", &b"Synthetic package"[..]),
+            ("THIRD-PARTY-NOTICES.txt", &b"Synthetic notices"[..]),
+            ("ui/index.html", &b"Synthetic Rust"[..]),
+            ("ui/atelier-loader.js", &b"synthetic"[..]),
+            ("ui/atelier-ui-test.js", &b"synthetic"[..]),
+            ("ui/atelier-ui-test_bg.wasm", &b"\0asm\x01\0\0\0"[..]),
+            ("ui/style-test.css", &b"synthetic"[..]),
+        ] {
+            std::fs::write(directory.join(name), bytes).unwrap();
+        }
+        let manifest = payload::manifest(&directory, payload::TARGETS[1], version).unwrap();
+        payload::write(
+            &directory.join("atelier-package.json"),
+            &serde_json::to_vec(&manifest).unwrap(),
+        )
+        .unwrap();
+        let archive = root.path().join("source.zip");
+        package_archive::create(&directory, &archive).unwrap();
+        let keys = root.path().join("keys");
+        update_package::generate_synthetic(&keys).unwrap();
+        update_package::sign(
+            &archive,
+            payload::TARGETS[1],
+            &keys,
+            &root.path().join("source.json"),
+        )
+        .unwrap();
+        root
+    }
+
+    #[test]
+    fn negative_fixture_changes_only_the_manifest_and_preserves_existing_outputs() {
+        let root = signed_fixture(env!("CARGO_PKG_VERSION"));
+        let archive = root.path().join("source.zip");
+        let before = std::fs::read(&archive).unwrap();
+        let signature = root.path().join("source.json");
+        let trust = root.path().join("keys").join(update_package::PUBLIC_KEY);
+        let output = root.path().join("negative.zip");
+        prepare_negative(&archive, &signature, &trust, &output, payload::TARGETS[1]).unwrap();
+        assert_eq!(std::fs::read(&archive).unwrap(), before);
+        let negative = std::fs::read(&output).unwrap();
+        let original = package_archive::unpack(&before, payload::TARGETS[1], root.path()).unwrap();
+        let changed = package_archive::unpack(&negative, payload::TARGETS[1], root.path()).unwrap();
+        let mut next = payload::version_parts(env!("CARGO_PKG_VERSION")).unwrap();
+        next[2] += 1;
+        assert_eq!(
+            changed.manifest()["version"],
+            format!("{}.{}.{}", next[0], next[1], next[2])
+        );
+        assert_eq!(changed.manifest()["files"], original.manifest()["files"]);
+        for entry in original.manifest()["files"].as_array().unwrap() {
+            let name = entry["path"].as_str().unwrap();
+            assert_eq!(
+                std::fs::read(original.path().join(name)).unwrap(),
+                std::fs::read(changed.path().join(name)).unwrap()
+            );
+        }
+        assert!(
+            prepare_negative(&archive, &signature, &trust, &output, payload::TARGETS[1]).is_err()
+        );
+        assert_eq!(std::fs::read(&output).unwrap(), negative);
+    }
+
+    #[test]
+    fn release_preparation_rejects_unqualified_versions_targets_and_corrupted_sources() {
+        let root = signed_fixture(env!("CARGO_PKG_VERSION"));
+        let archive = root.path().join("source.zip");
+        let signature = root.path().join("source.json");
+        let trust = root.path().join("keys").join(update_package::PUBLIC_KEY);
+        let output = root.path().join("negative.zip");
+        assert!(
+            prepare_negative(&archive, &signature, &trust, &output, payload::TARGETS[0]).is_err()
+        );
+        assert!(!output.exists());
+        std::fs::write(&archive, b"corrupted synthetic archive").unwrap();
+        assert!(
+            prepare_negative(&archive, &signature, &trust, &output, payload::TARGETS[1]).is_err()
+        );
+        assert!(!output.exists());
+        let other = signed_fixture("999.0.0");
+        assert!(
+            prepare_negative(
+                &other.path().join("source.zip"),
+                &other.path().join("source.json"),
+                &other.path().join("keys").join(update_package::PUBLIC_KEY),
+                &output,
+                payload::TARGETS[1]
+            )
+            .is_err()
+        );
+        assert!(!output.exists());
+    }
+
     #[tokio::test]
     async fn an_existing_delivery_is_preserved_before_any_build_or_key_generation() {
         let root = tempfile::tempdir().unwrap();

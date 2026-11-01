@@ -135,6 +135,8 @@ async fn main() -> Result<()> {
         ["build-ui"] => build_ui(false),
         ["build-ui", "--dev"] => build_ui(true),
         ["qualify-packages", output] => package_delivery::qualify(Path::new(output)).await,
+        ["qualify-signed-portable", archive, signature, trust, output] => package_delivery::qualify_signed_portable(Path::new(archive), Path::new(signature), Path::new(trust), Path::new(output)).await,
+        ["prepare-release-negative", archive, signature, trust, output] => package_delivery::prepare_release_negative(Path::new(archive), Path::new(signature), Path::new(trust), Path::new(output)),
         ["third-party-notices", output] => notices::generate(Path::new(output)).await,
         ["build-installers",archive,signature,trust,output]=>installers::build(Path::new(archive),Path::new(signature),Path::new(trust),Path::new(output)).await,
         ["stage-package", target, binary, assets, notices, output] => package::stage(target,Path::new(binary),Path::new(assets),Path::new(notices),Path::new(output)),
@@ -162,7 +164,7 @@ async fn main() -> Result<()> {
         ["test-updates"] => update_flow::test().await,
         ["test-updates", "--prepared-delivery", delivery] => update_flow::test_delivery(Path::new(delivery)).await,
         ["qualify-installed-update", installation, data, port, delivery] => update_flow::test_installed(Path::new(installation), Path::new(data), port.parse()?, Path::new(delivery)).await,
-        _ => Err("Usage : cargo xtask inventory [--check] | build-ui [--dev] | build-installers ARCHIVE SIGNATURE TRUST OUTPUT | third-party-notices OUTPUT.txt | stage-package TARGET BINARY ASSETS NOTICES.txt OUTPUT | verify-package DIRECTORY | archive-package DIRECTORY OUTPUT.zip | verify-archive ARCHIVE.zip TARGET | synthetic-update-key DIRECTORY | sign-package ARCHIVE TARGET KEYS OUTPUT | verify-signed-package ARCHIVE METADATA TRUST TARGET CURRENT | test-ui [--prepared-assets [--prepared-binaries]] | test-keyring | test-keyring-lock | test-keyring-account PHASE DIRECTORY | test-tray. Les commandes de livraison, installateurs, tray et mises à jour sont des candidats non qualifiés ; aucune réussite sans campagne finale exécutée.".into()),
+        _ => Err("Usage : cargo xtask inventory [--check] | build-ui [--dev] | build-installers ARCHIVE SIGNATURE TRUST OUTPUT | qualify-signed-portable ARCHIVE SIGNATURE TRUST OUTPUT.json | prepare-release-negative ARCHIVE SIGNATURE TRUST OUTPUT.zip | third-party-notices OUTPUT.txt | stage-package TARGET BINARY ASSETS NOTICES.txt OUTPUT | verify-package DIRECTORY | archive-package DIRECTORY OUTPUT.zip | verify-archive ARCHIVE.zip TARGET | synthetic-update-key DIRECTORY | sign-package ARCHIVE TARGET KEYS OUTPUT | verify-signed-package ARCHIVE METADATA TRUST TARGET CURRENT | test-ui [--prepared-assets [--prepared-binaries]] | test-keyring | test-keyring-lock | test-keyring-account PHASE DIRECTORY | test-tray. Les commandes de livraison, installateurs, tray et mises à jour sont des candidats non qualifiés ; aucune réussite sans campagne finale exécutée.".into()),
     }
 }
 

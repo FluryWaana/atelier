@@ -180,6 +180,7 @@ jobs:
           key: rust-native-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             rust-native-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-
+            rust-native-v2-${{ runner.os }}-${{ runner.arch }}-
             rust-build-v1-${{ runner.os }}-${{ runner.arch }}-native-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
       - run: rustc -vV
       - name: Identify the macOS curl dependency
@@ -386,6 +387,7 @@ jobs:
           key: rust-browser-v3-${{ runner.os == 'macOS' && matrix.os || runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             rust-browser-v3-${{ runner.os == 'macOS' && matrix.os || runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-
+            rust-browser-v3-${{ runner.os == 'macOS' && matrix.os || runner.os }}-${{ runner.arch }}-
             rust-browser-v2-${{ runner.os == 'macOS' && matrix.os || runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-
       - run: cargo build --locked -p atelier-app --bin atelier
       - run: cargo build --locked -p xtask --bin xtask --bin native-fixture
@@ -535,6 +537,7 @@ jobs:
           key: rust-delivery-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             rust-delivery-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-
+            rust-delivery-v2-${{ runner.os }}-${{ runner.arch }}-
             rust-delivery-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
             rust-native-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}-
             rust-build-v1-${{ runner.os }}-${{ runner.arch }}-native-
