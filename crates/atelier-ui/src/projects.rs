@@ -866,7 +866,6 @@ pub fn Projects(
                                 >
                                     <div class="directory-picker">
                                         <crate::form::Input
-                                            copy=true
                                             {..}
                                             id="project-repo"
                                             required=true

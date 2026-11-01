@@ -3381,26 +3381,7 @@ async fn projects_scenario(
     client.execute("const select=document.querySelector('#project-agent'); select.value='claude'; select.dispatchEvent(new Event('change',{bubbles:true}));",vec![]).await?;
 
     click(client, "#project-tab-general").await?;
-    client.execute("window.__syntheticCopy = null; Object.defineProperty(navigator, 'clipboard', {configurable:true, value:{writeText:async value=>{window.__syntheticCopy=value;}}});", vec![]).await?;
-    click(
-        client,
-        "#project-repo + .ui-input-buttons [data-input-action=copy]",
-    )
-    .await?;
-    wait_dom(client, "return window.__syntheticCopy === document.querySelector('#project-repo').value && document.querySelector('#project-repo').closest('.ui-input-actions').querySelector('[role=status]').textContent.trim().length > 0;", vec![]).await?;
-    client.execute("Object.defineProperty(navigator, 'clipboard', {configurable:true, value:{writeText:async()=>{throw Error('Synthetic clipboard denied');}}});",vec![]).await?;
-    click(
-        client,
-        "#project-repo + .ui-input-buttons [data-input-action=copy]",
-    )
-    .await?;
-    wait_dom(client, "return document.querySelector('#project-repo').closest('.ui-input-actions').querySelector('[role=status]').textContent.includes('impossible');", vec![]).await?;
-    client
-        .execute(
-            "delete navigator.clipboard; delete window.__syntheticCopy;",
-            vec![],
-        )
-        .await?;
+    wait_dom(client, "const input=document.querySelector('#project-repo'),browse=document.querySelector('#browse-project-settings');return input?.parentElement.classList.contains('directory-picker') && !input.parentElement.querySelector('[data-input-action=copy]') && browse.getBoundingClientRect().height <= input.getBoundingClientRect().height + 1;", vec![]).await?;
     click(client, "#project-tab-launch").await?;
     click(client, "#detect-front").await?;
     wait_dom(client, "return document.querySelectorAll('.launch-candidate[data-role=front]').length === 1 && !document.querySelector('#project-name')?.disabled && document.querySelector('#project-settings-panel fieldset')?.disabled === false;", vec![]).await?;
