@@ -67,7 +67,7 @@ fn transfer_prompt(source: &Path, destination: &Path) -> Result<String> {
         return Err("Les deux chemins du transfert doivent être absolus et non vides.".into());
     }
     Ok(format!(
-        "Copier les données Rust / Copy Rust data\n\nSource : {source}\nDestination : {destination}\n\nLa source sera conservée. La destination doit être vide. Les dépôts locaux devront être réautorisés.\nThe source is preserved. The destination must be empty. Local repositories must be authorized again."
+        "Copier les données Atelier Kanban / Copy Atelier Kanban data\n\nSource : {source}\nDestination : {destination}\n\nLa source sera conservée. La destination doit être vide. Les dépôts locaux devront être réautorisés.\nThe source is preserved. The destination must be empty. Local repositories must be authorized again."
     ))
 }
 
@@ -78,6 +78,49 @@ pub async fn confirm_transfer(source: &Path, destination: &Path) -> Result<bool>
         return Err("Confirmation graphique indisponible ; aucune copie effectuée.".into());
     }
     serde_json::from_slice(&output.stdout).map_err(|_| "Réponse de confirmation invalide.".into())
+}
+
+fn workspace_prompt(previous: &Path, fresh: &Path) -> Result<String> {
+    let previous = previous
+        .to_str()
+        .ok_or("Chemin des données précédentes invalide.")?;
+    let fresh = fresh.to_str().ok_or("Chemin du nouvel espace invalide.")?;
+    if selected(previous)?.is_none() || selected(fresh)?.is_none() || previous == fresh {
+        return Err("Deux dossiers absolus distincts sont requis.".into());
+    }
+    Ok(format!(
+        "Des données d'une version précédente sont présentes dans :\n{previous}\n\nCette version ne peut pas les ouvrir. Ouvrir un nouvel espace vide dans :\n{fresh}\n\nLes données précédentes seront conservées.\n\nPrevious-version data cannot be opened by this version. Open a separate empty workspace? Previous data will be preserved."
+    ))
+}
+
+pub async fn confirm_new_workspace(previous: &Path, fresh: &Path) -> Result<bool> {
+    workspace_prompt(previous, fresh)?;
+    let output = helper("confirm-new-workspace", &[previous, fresh]).await?;
+    if !output.status.success() {
+        return Err("Confirmation graphique indisponible. Aucun nouvel espace créé.".into());
+    }
+    serde_json::from_slice(&output.stdout).map_err(|_| "Réponse de confirmation invalide.".into())
+}
+
+pub async fn workspace_confirmation_command(
+    args: impl Iterator<Item = std::ffi::OsString>,
+) -> Result<()> {
+    let mut args = args;
+    let previous = args
+        .next()
+        .map(std::path::PathBuf::from)
+        .ok_or("Dossier précédent absent.")?;
+    let fresh = args
+        .next()
+        .map(std::path::PathBuf::from)
+        .ok_or("Nouvel espace absent.")?;
+    if args.next().is_some() {
+        return Err("Arguments de confirmation inattendus.".into());
+    }
+    let confirmed = confirm_prompt(workspace_prompt(&previous, &fresh)?, "Ouvrir / Open").await?;
+    use std::io::Write;
+    std::io::stdout().write_all(&serde_json::to_vec(&confirmed)?)?;
+    Ok(())
 }
 
 pub async fn confirmation_command(args: impl Iterator<Item = std::ffi::OsString>) -> Result<()> {
@@ -94,6 +137,15 @@ pub async fn confirmation_command(args: impl Iterator<Item = std::ffi::OsString>
         return Err("Arguments de confirmation inattendus.".into());
     }
     let prompt = transfer_prompt(&source, &destination)?;
+    let confirmed = confirm_prompt(prompt, "Copier / Copy").await?;
+    use std::io::Write;
+    std::io::stdout().write_all(&serde_json::to_vec(&confirmed)?)?;
+    Ok(())
+}
+
+async fn confirm_prompt(prompt: String, accept: &str) -> Result<bool> {
+    #[cfg(windows)]
+    let _ = accept;
     #[cfg(windows)]
     let confirmed = tokio::task::spawn_blocking(move || {
         use windows_sys::Win32::UI::WindowsAndMessaging::{
@@ -106,7 +158,7 @@ pub async fn confirmation_command(args: impl Iterator<Item = std::ffi::OsString>
             MessageBoxW(
                 std::ptr::null_mut(),
                 prompt.as_ptr(),
-                windows_sys::core::w!("Atelier Kanban : Import"),
+                windows_sys::core::w!("Atelier Kanban"),
                 MB_YESNOCANCEL | MB_ICONQUESTION | MB_DEFBUTTON2 | MB_SETFOREGROUND,
             )
         } {
@@ -121,7 +173,7 @@ pub async fn confirmation_command(args: impl Iterator<Item = std::ffi::OsString>
         #[cfg(target_os = "macos")]
         let mut command = {
             let mut command = Command::new("/usr/bin/osascript");
-            command.args(["-e", "on run argv\ntry\ndisplay dialog (item 1 of argv) buttons {\"Annuler / Cancel\", \"Copier / Copy\"} default button 1 cancel button 1 with title \"Atelier Kanban\" with icon caution\nreturn true\non error number -128\nreturn false\nend try\nend run", "--", &prompt]);
+            command.args(["-e", "on run argv\ntry\ndisplay dialog (item 1 of argv) buttons {\"Annuler / Cancel\", (item 2 of argv)} default button 1 cancel button 1 with title \"Atelier Kanban\" with icon caution\nreturn true\non error number -128\nreturn false\nend try\nend run", "--", &prompt, accept]);
             command
         };
         #[cfg(not(target_os = "macos"))]
@@ -132,11 +184,11 @@ pub async fn confirmation_command(args: impl Iterator<Item = std::ffi::OsString>
                 "--default-cancel",
                 "--no-wrap",
                 "--title=Atelier Kanban",
-                "--ok-label=Copier / Copy",
                 "--cancel-label=Annuler / Cancel",
                 "--text",
                 &prompt,
             ]);
+            command.arg(format!("--ok-label={accept}"));
             command
         };
         environment(&mut command);
@@ -162,9 +214,7 @@ pub async fn confirmation_command(args: impl Iterator<Item = std::ffi::OsString>
             }
         }
     };
-    use std::io::Write;
-    std::io::stdout().write_all(&serde_json::to_vec(&confirmed)?)?;
-    Ok(())
+    Ok(confirmed)
 }
 pub async fn command() -> Result<()> {
     #[cfg(windows)]
@@ -287,6 +337,25 @@ async fn native() -> Result<Option<String>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn workspace_confirmation_names_the_separate_paths_without_creating_or_moving_data() {
+        let root = tempfile::tempdir().unwrap();
+        let previous = root.path().join("previous");
+        let fresh = root.path().join("fresh");
+        std::fs::create_dir(&previous).unwrap();
+        std::fs::write(previous.join("human-note"), b"preserve").unwrap();
+        let prompt = workspace_prompt(&previous, &fresh).unwrap();
+        assert!(prompt.contains(previous.to_str().unwrap()));
+        assert!(prompt.contains(fresh.to_str().unwrap()));
+        assert!(prompt.contains("seront conservées"));
+        assert!(workspace_prompt(&previous, &previous).is_err());
+        assert!(workspace_prompt(Path::new("relative"), &fresh).is_err());
+        assert!(!fresh.exists());
+        assert_eq!(
+            std::fs::read(previous.join("human-note")).unwrap(),
+            b"preserve"
+        );
+    }
     #[test]
     fn transfer_confirmation_names_both_exact_paths_and_rejects_empty_or_control_paths() {
         let root = tempfile::tempdir().unwrap();

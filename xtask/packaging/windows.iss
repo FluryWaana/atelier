@@ -4,18 +4,24 @@
 #ifndef ReleaseVersion
   #error ReleaseVersion is required
 #endif
+#ifndef ApplicationIcon
+  #error ApplicationIcon is required
+#endif
 [Setup]
 AppId={{1E47A40D-620A-4815-AED7-B4CB019B4BB9}
-AppName=Atelier Kanban Rust
+AppName=Atelier Kanban
 AppVersion={#ReleaseVersion}
 AppPublisher=Atelier Kanban
-DefaultDirName={localappdata}\Programs\AtelierKanbanRust
-DefaultGroupName=Atelier Kanban Rust
+DefaultDirName={localappdata}\Programs\Atelier Kanban
+DefaultGroupName=Atelier Kanban
+SetupIconFile={#ApplicationIcon}
+VersionInfoDescription=Atelier Kanban Setup
+VersionInfoProductName=Atelier Kanban
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0
-DisableDirPage=yes
+DisableDirPage=no
 DisableProgramGroupPage=yes
 CloseApplications=no
 RestartApplications=no
@@ -31,27 +37,27 @@ WizardStyle=modern
 Name: "french"; MessagesFile: "compiler:Languages\French.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
 [Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 [Icons]
-Name: "{group}\Atelier Kanban Rust"; Filename: "{app}\atelier.exe"; WorkingDir: "{app}"
-Name: "{group}\Arrêter Atelier Kanban Rust"; Filename: "{app}\atelier.exe"; Parameters: "stop"
-Name: "{group}\Désinstaller Atelier Kanban Rust"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\Atelier Kanban Rust"; Filename: "{app}\atelier.exe"; WorkingDir: "{app}"; Tasks: desktopicon
+Name: "{group}\Atelier Kanban"; Filename: "{app}\atelier.exe"; WorkingDir: "{app}"; IconFilename: "{app}\atelier.exe"
+Name: "{group}\Arrêter Atelier Kanban"; Filename: "{app}\atelier.exe"; Parameters: "stop"
+Name: "{group}\Désinstaller Atelier Kanban"; Filename: "{uninstallexe}"
+Name: "{autodesktop}\Atelier Kanban"; Filename: "{app}\atelier.exe"; WorkingDir: "{app}"; IconFilename: "{app}\atelier.exe"; Tasks: desktopicon
 [Code]
 function ReserveMaintenance(): Boolean;
 begin
   CreateMutex('Global\AtelierKanbanRustMaintenance');
   Result := not CheckForMutexes('Global\AtelierKanbanRustRunning');
   if not Result then
-    SuppressibleMsgBox('Arrêtez toutes les instances Atelier Rust avant de poursuivre. / Stop all Atelier Rust instances first.', mbError, MB_OK, IDOK);
+    SuppressibleMsgBox('Arrêtez toutes les instances Atelier Kanban avant de poursuivre. / Stop all Atelier Kanban instances first.', mbError, MB_OK, IDOK);
 end;
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
   Result := '';
   if not ReserveMaintenance() then
-    Result := 'Atelier Rust est encore ouvert. / Atelier Rust is still running.'
+    Result := 'Atelier Kanban est encore ouvert. / Atelier Kanban is still running.'
   else if DirExists(ExpandConstant('{app}')) then
     Result := 'Installation existante conservée. Utilisez la mise à jour signée ou désinstallez-la après vérification. / Existing installation preserved. Use signed updates or uninstall it after verification.';
 end;

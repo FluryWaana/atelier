@@ -191,6 +191,13 @@ pub(super) async fn build(
                 format!("/DSourceDir={}", compiler_path(&app)?).into(),
                 format!("/DOutputDir={}", compiler_path(&result)?).into(),
                 format!("/DReleaseVersion={version}").into(),
+                format!(
+                    "/DApplicationIcon={}",
+                    compiler_path(
+                        &super::root().join("crates/atelier-app/resources/atelier-kanban.ico")
+                    )?
+                )
+                .into(),
                 super::root()
                     .join("xtask/packaging/windows.iss")
                     .into_os_string(),
@@ -249,6 +256,15 @@ pub(super) async fn build(
             &deb,
             "usr/share/applications/atelier-kanban-rust.desktop",
             include_bytes!("../packaging/atelier-kanban-rust.desktop"),
+            false,
+        )?;
+        put(
+            &deb,
+            "usr/share/icons/hicolor/512x512/apps/atelier-kanban.png",
+            &package::read(
+                &super::root().join("crates/atelier-ui/atelier-kanban.png"),
+                1024 * 1024,
+            )?,
             false,
         )?;
         let architecture = if target.starts_with("aarch64") {

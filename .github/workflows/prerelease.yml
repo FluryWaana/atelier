@@ -153,7 +153,7 @@ jobs:
           test "$(find . -maxdepth 1 -type f | wc -l)" -eq 6
           tag="v$RELEASE_VERSION"
           cat > "$RUNNER_TEMP/release-notes.txt" <<'NOTES'
-          Prérelease Windows x64 de l'application Rust et de son interface Leptos WASM.
+          Prérelease Windows x64 d'Atelier Kanban.
 
           Le Setup, ses menus natifs, la mise à jour installée, la conservation des données, la désinstallation et la réinstallation ont été qualifiés sur le runner Windows avec des données synthétiques.
 
@@ -164,7 +164,7 @@ jobs:
           Cette prérelease ne remplace pas la release stable et n'est pas proposée par la recherche automatique de mises à jour stables.
           NOTES
           gh api --method POST "repos/$GH_REPO/git/refs" -f "ref=refs/tags/$tag" -f "sha=$GITHUB_SHA" > /dev/null
-          gh release create "$tag" --verify-tag --draft --prerelease --latest=false --title "Atelier Kanban $tag · Rust Windows preview" --notes-file "$RUNNER_TEMP/release-notes.txt" \
+          gh release create "$tag" --verify-tag --draft --prerelease --latest=false --title "Atelier Kanban $tag preview" --notes-file "$RUNNER_TEMP/release-notes.txt" \
             "atelier-$RELEASE_VERSION-x86_64-pc-windows-msvc.zip" \
             "atelier-$RELEASE_VERSION-x86_64-pc-windows-msvc.zip.signed.json" \
             "atelier-kanban-$RELEASE_VERSION-windows-x64-setup.exe" \

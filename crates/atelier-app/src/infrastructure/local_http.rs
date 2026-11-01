@@ -38,6 +38,43 @@ pub fn server_port(address: &str) -> Result<u16> {
     Ok(port)
 }
 
+/// Classifies at most eight causes without exposing error messages, URLs or sessions.
+pub fn transport_error_details(error: &(dyn std::error::Error + 'static)) -> String {
+    let mut causes = Vec::new();
+    let mut current = Some(error);
+    for _ in 0..8 {
+        let Some(error) = current else { break };
+        causes.push(
+            if let Some(error) = error.downcast_ref::<reqwest::Error>() {
+                format!(
+                    "reqwest(timeout={}, connect={}, request={}, body={}, decode={})",
+                    error.is_timeout(),
+                    error.is_connect(),
+                    error.is_request(),
+                    error.is_body(),
+                    error.is_decode()
+                )
+            } else if let Some(error) = error.downcast_ref::<hyper::Error>() {
+                format!(
+                    "hyper(incomplete={}, closed={}, canceled={})",
+                    error.is_incomplete_message(),
+                    error.is_closed(),
+                    error.is_canceled()
+                )
+            } else if let Some(error) = error.downcast_ref::<std::io::Error>() {
+                format!("io(kind={:?}, os={:?})", error.kind(), error.raw_os_error())
+            } else {
+                "cause non classée".into()
+            },
+        );
+        current = error.source();
+    }
+    if current.is_some() {
+        causes.push("causes suivantes omises".into());
+    }
+    causes.join(" | ")
+}
+
 fn disconnected(error: &(dyn std::error::Error + 'static)) -> bool {
     if let Some(error) = error.downcast_ref::<hyper::Error>()
         && error.is_incomplete_message()
@@ -206,6 +243,37 @@ impl LocalHttp {
 #[cfg(test)]
 mod tests {
     use std::io::{Error, ErrorKind};
+
+    #[test]
+    fn transport_diagnostics_preserve_nested_io_codes_without_error_text_or_unbounded_sources() {
+        #[derive(Debug)]
+        struct PrivateCause(Box<dyn std::error::Error>);
+        impl std::fmt::Display for PrivateCause {
+            fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("synthetic-secret http://127.0.0.1/?session=synthetic-secret")
+            }
+        }
+        impl std::error::Error for PrivateCause {
+            fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+                Some(self.0.as_ref())
+            }
+        }
+        let mut error: Box<dyn std::error::Error> = Box::new(PrivateCause(Box::new(
+            std::io::Error::from_raw_os_error(10053),
+        )));
+        let diagnostic = super::transport_error_details(error.as_ref());
+        assert!(diagnostic.contains("io(kind="));
+        assert!(diagnostic.contains("os=Some(10053)"));
+        assert!(!diagnostic.contains("synthetic-secret"));
+        assert!(!diagnostic.contains("http"));
+        for _ in 0..20 {
+            error = Box::new(PrivateCause(error));
+        }
+        let diagnostic = super::transport_error_details(error.as_ref());
+        assert_eq!(diagnostic.split(" | ").count(), 9);
+        assert!(diagnostic.ends_with("causes suivantes omises"));
+        assert!(diagnostic.len() < 1024);
+    }
 
     #[test]
     fn disconnected_recognizes_transport_breaks_but_not_unknown_server_states() {

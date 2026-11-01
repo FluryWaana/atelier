@@ -10,7 +10,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-const USAGE: &str = "Atelier Kanban Rust\natelier [launch] [--data-dir DOSSIER] [--assets DOSSIER_UI] [--port 4317] [--no-browser]\natelier stop [--data-dir DOSSIER] [--port 4317]\natelier install --archive PAQUET --signature SIGNATURE --trust CLE_PUBLIQUE --destination NOUVEAU_DOSSIER [--mode portable|user|system]\natelier update-preview --archive PAQUET --signature SIGNATURE --data-dir DONNEES_RUST [--port 4317]\natelier import-data (--source DONNEES_RUST | --choose-source) --destination DOSSIER_VIDE --confirm\natelier recover-package-maintenance --root INSTALLATION_ABSOLUE --confirm\natelier update-status\natelier update-apply|update-cancel|update-recover --operation IDENTIFIANT --confirm\natelier serve --data-dir DOSSIER --assets DOSSIER_UI [--port 4317] [--dev]";
+const USAGE: &str = "Atelier Kanban\natelier [launch] [--data-dir DOSSIER] [--assets DOSSIER_UI] [--port 4317] [--no-browser]\natelier stop [--data-dir DOSSIER] [--port 4317]\natelier install --archive PAQUET --signature SIGNATURE --trust CLE_PUBLIQUE --destination NOUVEAU_DOSSIER [--mode portable|user|system]\natelier update-preview --archive PAQUET --signature SIGNATURE --data-dir DONNEES [--port 4317]\natelier import-data (--source DONNEES | --choose-source) --destination DOSSIER_VIDE --confirm\natelier recover-package-maintenance --root INSTALLATION_ABSOLUE --confirm\natelier update-status\natelier update-apply|update-cancel|update-recover --operation IDENTIFIANT --confirm\natelier serve --data-dir DOSSIER --assets DOSSIER_UI [--port 4317] [--dev]";
 
 #[derive(Debug, PartialEq)]
 enum Action {
@@ -102,9 +102,9 @@ fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Options> {
     Ok(options)
 }
 
-fn data_directory(root: &Path) -> Result<PathBuf> {
+async fn data_directory(root: &Path, confirm: bool) -> Result<Option<PathBuf>> {
     if installation::mode(root)? == InstallationMode::Portable {
-        return Ok(root.join("data"));
+        return Ok(Some(root.join("data")));
     }
     let (platform, home) = if cfg!(windows) {
         (Platform::Windows, "USERPROFILE")
@@ -119,10 +119,20 @@ fn data_directory(root: &Path) -> Result<PathBuf> {
         .ok_or("Dossier personnel absolu indisponible pour cette installation.")?;
     let local = std::env::var_os("LOCALAPPDATA").map(PathBuf::from);
     let xdg = std::env::var_os("XDG_DATA_HOME").map(PathBuf::from);
-    installation::data_directory(root, platform, &home, local.as_deref(), xdg.as_deref())
+    match installation::default_data_location(root, platform, &home, local.as_deref(), xdg.as_deref())? {
+        installation::DataLocation::Ready(path) => Ok(Some(path)),
+        installation::DataLocation::ConfirmFresh { previous, fresh } if confirm => {
+            if atelier_app::infrastructure::folders::confirm_new_workspace(&previous, &fresh).await? {
+                Ok(Some(fresh))
+            } else {
+                Ok(None)
+            }
+        }
+        installation::DataLocation::ConfirmFresh { .. } => Err("Les données d'une version précédente ne sont pas compatibles. Ouvre Atelier Kanban normalement pour choisir un nouvel espace. Les données précédentes sont conservées.".into()),
+    }
 }
 
-fn main() -> Result<()> {
+fn run() -> Result<()> {
     if std::env::args_os().nth(1).as_deref() == Some(std::ffi::OsStr::new("tray-helper")) {
         return atelier_app::infrastructure::tray::command(std::env::args_os().skip(2));
     }
@@ -130,6 +140,50 @@ fn main() -> Result<()> {
         .enable_all()
         .build()?
         .block_on(application())
+}
+
+fn main() -> std::process::ExitCode {
+    match run() {
+        Ok(()) => std::process::ExitCode::SUCCESS,
+        Err(error) => {
+            eprintln!("Atelier Kanban : {error}");
+            if error.downcast_ref::<reqwest::Error>().is_some() {
+                eprintln!(
+                    "Diagnostic transport local : {}",
+                    atelier_app::infrastructure::local_http::transport_error_details(
+                        error.as_ref()
+                    )
+                );
+            }
+            #[cfg(windows)]
+            {
+                let args: Vec<_> = std::env::args_os().skip(1).collect();
+                if args.is_empty()
+                    || (args.len() == 1 && matches!(args[0].to_str(), Some("launch" | "stop")))
+                {
+                    use windows_sys::Win32::UI::WindowsAndMessaging::{
+                        MB_ICONERROR, MB_OK, MB_SETFOREGROUND, MessageBoxW,
+                    };
+                    let message: Vec<u16> =
+                        format!("Atelier Kanban n'a pas pu terminer cette action.\n\n{error}")
+                            .replace('\0', "")
+                            .encode_utf16()
+                            .chain(Some(0))
+                            .collect();
+                    // This synchronous launch error remains visible after the shortcut process exits.
+                    unsafe {
+                        MessageBoxW(
+                            std::ptr::null_mut(),
+                            message.as_ptr(),
+                            windows_sys::core::w!("Atelier Kanban"),
+                            MB_OK | MB_ICONERROR | MB_SETFOREGROUND,
+                        );
+                    }
+                }
+            }
+            std::process::ExitCode::FAILURE
+        }
+    }
 }
 
 async fn application() -> Result<()> {
@@ -154,8 +208,8 @@ async fn application() -> Result<()> {
         }
         let executable = std::env::current_exe()?;
         let target = atelier_app::infrastructure::package::native_target()?;
-        let installation =
-            installed::locate(&executable, target)?.ok_or("Installation Rust absente.")?;
+        let installation = installed::locate(&executable, target)?
+            .ok_or("Installation Atelier Kanban absente.")?;
         return installed::verify_all(installation.root(), target);
     }
     if first.as_deref() == Some(std::ffi::OsStr::new("import-data")) {
@@ -172,6 +226,9 @@ async fn application() -> Result<()> {
     }
     if first.as_deref() == Some(std::ffi::OsStr::new("confirm-import")) {
         return atelier_app::infrastructure::folders::confirmation_command(command).await;
+    }
+    if first.as_deref() == Some(std::ffi::OsStr::new("confirm-new-workspace")) {
+        return atelier_app::infrastructure::folders::workspace_confirmation_command(command).await;
     }
     if first.as_deref() == Some(std::ffi::OsStr::new("connector-azure")) {
         if command.next().is_some() {
@@ -203,7 +260,7 @@ async fn application() -> Result<()> {
     }
     if first.as_deref() == Some(std::ffi::OsStr::new("install")) {
         installed::install_command(command)?;
-        println!("Installation Rust créée. Aucun dossier de données importé.");
+        println!("Installation Atelier Kanban créée. Aucun dossier de données importé.");
         return Ok(());
     }
     let options = parse(std::env::args_os().skip(1))?;
@@ -218,7 +275,7 @@ async fn application() -> Result<()> {
     let installation = installed::locate(&executable, package::native_target()?)?;
     if options.action == Action::Version {
         println!(
-            "Atelier Kanban Rust {}",
+            "Atelier Kanban {}",
             installation
                 .as_ref()
                 .map(|installation| installation.current().active.version.as_str())
@@ -244,8 +301,11 @@ async fn application() -> Result<()> {
         return Err("Le service doit être lancé depuis la version active vérifiée.".into());
     }
     let data = match options.data {
-        Some(path) => std::path::absolute(path)?,
-        None => data_directory(root)?,
+        Some(path) => Some(std::path::absolute(path)?),
+        None => data_directory(root, options.action == Action::Launch && options.browser).await?,
+    };
+    let Some(data) = data else {
+        return Ok(());
     };
     if data.to_str().is_none() {
         return Err("Le chemin des données doit être un texte Unicode valide.".into());
@@ -264,7 +324,7 @@ async fn application() -> Result<()> {
     };
     let assets = std::path::absolute(options.assets.unwrap_or(default_assets))?;
     if !assets.join("index.html").is_file() {
-        return Err("Interface Rust absente. Utilise un paquet complet ou construis les assets avec cargo xtask build-ui.".into());
+        return Err("L'interface Atelier Kanban est absente. Réinstalle l'application depuis un paquet complet.".into());
     }
     if options.action == Action::Launch {
         launcher::start(&effective, &data, &assets, options.port, options.browser).await?;
@@ -276,7 +336,7 @@ async fn application() -> Result<()> {
     }
     let listener =
         tokio::net::TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, options.port)).await?;
-    println!("Atelier Kanban Rust sur http://{}", listener.local_addr()?);
+    println!("Atelier Kanban sur http://{}", listener.local_addr()?);
     if installation.is_some() && options.development {
         return Err("Le mode développement exige un binaire hors installation.".into());
     }

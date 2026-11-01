@@ -206,6 +206,140 @@ async fn native_launcher_reuses_only_its_authenticated_instance_and_preserves_da
 }
 
 #[tokio::test]
+async fn native_stop_closes_an_authenticated_event_stream_and_releases_the_data_directory() {
+    use atelier_app::infrastructure::data_lock::DataLock;
+
+    let instance = Instance {
+        data: tempfile::tempdir().unwrap(),
+        port: port(),
+    };
+    let assets = tempfile::tempdir().unwrap();
+    std::fs::write(
+        assets.path().join("index.html"),
+        "Synthetic SSE shutdown fixture",
+    )
+    .unwrap();
+    let executable = Path::new(env!("CARGO_BIN_EXE_atelier"));
+    launcher::start(
+        executable,
+        instance.data.path(),
+        assets.path(),
+        instance.port,
+        false,
+    )
+    .await
+    .unwrap();
+    let token = session::read(instance.data.path()).unwrap();
+    let address = format!("http://127.0.0.1:{}", instance.port);
+    let http = reqwest::Client::builder()
+        .no_proxy()
+        .redirect(reqwest::redirect::Policy::none())
+        .connect_timeout(Duration::from_secs(5))
+        .timeout(Duration::from_secs(60))
+        .build()
+        .unwrap();
+    let credentials = http
+        .get(format!("{address}/api/events/session"))
+        .bearer_auth(&token)
+        .timeout(Duration::from_secs(5))
+        .send()
+        .await
+        .unwrap()
+        .error_for_status()
+        .unwrap();
+    let cookie = credentials.headers()["set-cookie"]
+        .to_str()
+        .unwrap()
+        .split(';')
+        .next()
+        .unwrap()
+        .to_owned();
+    let mut events = http
+        .get(format!("{address}/api/events"))
+        .header("cookie", &cookie)
+        .send()
+        .await
+        .unwrap()
+        .error_for_status()
+        .unwrap();
+    assert_eq!(events.headers()["content-type"], "text/event-stream");
+    tokio::time::timeout(Duration::from_secs(5), async {
+        let mut connected = Vec::new();
+        while !connected.windows(2).any(|bytes| bytes == b"\n\n") {
+            connected
+                .extend_from_slice(&events.chunk().await.unwrap().expect("SSE connected event"));
+            assert!(connected.len() <= 1024);
+        }
+        assert!(
+            String::from_utf8(connected)
+                .unwrap()
+                .contains("data: connected\n")
+        );
+    })
+    .await
+    .expect("The authenticated SSE stream must open before shutdown");
+    assert!(DataLock::acquire(instance.data.path()).is_err());
+
+    // Retain and read the live browser-style stream while the real launcher requests shutdown.
+    tokio::time::timeout(Duration::from_secs(30), async {
+        tokio::try_join!(launcher::stop(instance.data.path(), instance.port), async {
+            let mut received = 0;
+            while let Some(chunk) = events.chunk().await? {
+                received += chunk.len();
+                assert!(received <= 64 * 1024);
+            }
+            Ok::<(), atelier_app::Error>(())
+        })
+        .unwrap();
+    })
+    .await
+    .expect("Native shutdown must finish with an open SSE subscriber");
+    assert!(
+        LocalHttp::new()
+            .unwrap()
+            .authenticated_health(&address, || session::read_optional(instance.data.path()))
+            .await
+            .unwrap()
+            .is_none()
+    );
+    drop(DataLock::acquire(instance.data.path()).unwrap());
+
+    // Session files persist, but the next server must reject both previous credentials.
+    launcher::start(
+        executable,
+        instance.data.path(),
+        assets.path(),
+        instance.port,
+        false,
+    )
+    .await
+    .unwrap();
+    assert!(session::read(instance.data.path()).unwrap() != token);
+    for request in [
+        http.get(format!("{address}/api/state")).bearer_auth(&token),
+        http.get(format!("{address}/api/events"))
+            .header("cookie", &cookie),
+    ] {
+        assert_eq!(
+            request
+                .timeout(Duration::from_secs(5))
+                .send()
+                .await
+                .unwrap()
+                .status(),
+            reqwest::StatusCode::UNAUTHORIZED
+        );
+    }
+    tokio::time::timeout(
+        Duration::from_secs(30),
+        launcher::stop(instance.data.path(), instance.port),
+    )
+    .await
+    .unwrap()
+    .unwrap();
+}
+
+#[tokio::test]
 async fn native_service_refuses_legacy_assets_without_initializing_a_data_directory() {
     let root = tempfile::tempdir().unwrap();
     let data = root.path().join("synthetic-unused");

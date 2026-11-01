@@ -8,7 +8,7 @@ $registration = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{1E47
 if (Test-Path -LiteralPath $registration) { throw 'Existing Rust registration preserved; runner is not disposable.' }
 $fixtureBase = [IO.Path]::GetFullPath($env:RUNNER_TEMP)
 $fixture = Join-Path $fixtureBase ('atelier-setup-qualification-' + [Guid]::NewGuid().ToString('N'))
-$app = Join-Path $fixture 'installed'
+$app = Join-Path $fixture 'installed app'
 $data = Join-Path $fixture 'synthetic-data'
 New-Item -ItemType Directory -Path $fixture | Out-Null
 $listener = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, 0)
@@ -16,7 +16,7 @@ $listener.Start()
 $port = $listener.LocalEndpoint.Port
 $listener.Stop()
 $launched = $false
-function Invoke-Owned([string]$File, [string[]]$Arguments, [bool]$Success = $true) {
+function Invoke-Owned([string]$File, [string[]]$Arguments, [bool]$Success = $true, [int]$TimeoutMilliseconds = 120000) {
   $start = [Diagnostics.ProcessStartInfo]::new()
   $start.FileName = $File
   $start.UseShellExecute = $false
@@ -25,7 +25,7 @@ function Invoke-Owned([string]$File, [string[]]$Arguments, [bool]$Success = $tru
   foreach ($argument in $Arguments) { $start.ArgumentList.Add($argument) }
   $process = [Diagnostics.Process]::Start($start)
   try {
-    if (-not $process.WaitForExit(120000)) {
+    if (-not $process.WaitForExit($TimeoutMilliseconds)) {
       $process.Kill($true)
       $process.WaitForExit()
       throw 'Owned qualification command timed out.'
@@ -45,6 +45,7 @@ try {
   Invoke-Owned $setups[0].FullName ($silent + @("/DIR=$app", "/LOG=$(Join-Path $deliveryRoot 'setup-install.log')"))
   $binary = Join-Path $app 'atelier.exe'
   Invoke-Owned $binary @('verify-installation')
+  Invoke-Owned 'pwsh' @('-NoLogo', '-NoProfile', '-NonInteractive', '-File', (Join-Path $PSScriptRoot 'qualify-default-launch-windows.ps1'), '-Binary', $binary) $true 180000
   Invoke-Owned $binary @('launch', '--data-dir', $data, '--port', "$port", '--no-browser')
   $launched = $true
   $uninstallers = @(Get-ChildItem -LiteralPath $app -Filter 'unins*.exe' -File)

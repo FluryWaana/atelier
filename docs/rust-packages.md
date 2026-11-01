@@ -4,7 +4,21 @@ Les composants décrits ici sont des candidats de préproduction. Les résultats
 
 ## Prérelease Windows et signature de distribution
 
-La version Rust suivante est `0.1.10`. Le workflow manuel `Windows prerelease` reçoit l'identifiant d'une campagne `Rust rebuild` réussie sur le même commit de `main`. Les contrôles, les tests natifs, le navigateur et la livraison Windows doivent tous avoir réussi. Un autre dépôt, une branche différente, un autre workflow, un job ignoré ou un commit différent sont refusés.
+### Correction du lancement et du packaging en 0.1.11
+
+La version 0.1.10 pouvait refuser le lancement depuis le raccourci si le dossier par défaut contenait des données d'une ancienne version. Sa qualification utilisait un dossier vide, un port libre et `--no-browser`. Elle ne couvrait pas ce parcours utilisateur. Les exécutables Windows ne contenaient pas non plus les ressources d'icône et de version, et l'installateur affichait le suffixe interne « Rust ».
+
+Le correctif en préparation pour 0.1.11 rétablit le nom public « Atelier Kanban », l'icône officielle, les métadonnées Windows et un diagnostic visible lors d'un échec depuis le raccourci. Il utilise un nouvel espace par défaut : `%LOCALAPPDATA%/AtelierKanban/workspace` sous Windows, `~/Library/Application Support/AtelierKanban/workspace` sous macOS et `$XDG_DATA_HOME/atelier-kanban-workspace` sous Linux, avec le repli habituel `~/.local/share`. Le mode portable conserve `data` dans son installation.
+
+Un espace compatible déjà présent dans l'ancien emplacement reste utilisé. Un nouvel espace déjà initialisé est réutilisé. Si l'ancien dossier contient un format non reconnu, le lancement interactif demande une confirmation avant d'ouvrir un espace vide distinct. Le refus ne crée aucun espace. Aucun déplacement, conversion ou effacement implicite n'est effectué. Un marqueur invalide, un lien ou un dossier inaccessible reste une erreur, sans repli vers des données vides.
+
+Le nouveau contrôle Setup vérifie le vrai raccourci installé, ses arguments vides, ses métadonnées, le lancement normal dans un profil synthétique, le refus puis l'acceptation du nouvel espace, la préservation du fichier ancien et l'arrêt avec les paramètres par défaut. Le chemin installé contient un espace. Ce contrôle est réservé au bureau jetable CI et reste à exécuter avant la nouvelle livraison. Les tests locaux n'actionnent pas de dialogue sur le bureau personnel.
+
+Une installation 0.1.10 doit être remplacée depuis le nouveau Setup pour bénéficier du lanceur et de l'icône corrigés. La mise à jour du payload seule conserve son bootstrap initial. La désinstallation conserve les données utilisateur. Les fichiers publiés de 0.1.10 ne sont pas remplacés.
+
+L'inspection du binaire publié 0.1.10 montre aussi un import de `VCRUNTIME140.dll`. Windows utilise maintenant le runtime C statique via [`crt-static`](https://doc.rust-lang.org/reference/linkage.html#static-and-dynamic-c-runtimes). Le test du binaire et la qualification du Setup inspectent les DLL réellement importées avec le `dumpbin` des outils MSVC. Les DLL Visual C++ externes sont refusées. La compilation Windows nécessite donc les outils MSVC, le SDK Windows avec `rc.exe` et `vswhere`/`dumpbin` pour cette vérification. Ces outils ne sont pas nécessaires sur le PC utilisateur.
+
+La première version de cette voie de distribution était `0.1.10`. Le workflow manuel `Windows prerelease` reçoit l'identifiant d'une campagne `Rust rebuild` réussie sur le même commit de `main`. Les contrôles, les tests natifs, le navigateur et la livraison Windows doivent tous avoir réussi. Un autre dépôt, une branche différente, un autre workflow, un job ignoré ou un commit différent sont refusés.
 
 La clé publique Ed25519 est celle des anciennes releases Node, extraite du document public au tag `v0.1.9`. Son encodage brut base64 est `Me0AEzOtX3PmBRk70z5cCW81EFsYENLNOxcG1qpEWOs=`. La confiance de distribution utilise `synthetic=false` et cette clé est épinglée dans le binaire. Les clés synthétiques restent réservées aux fixtures choisies explicitement. La clé privée PKCS8 PEM demeure dans le secret GitHub existant `RELEASE_SIGNING_KEY`. Aucun nouveau secret ni fichier privé local n'est créé. Seules les deux étapes de signature lancent le runner déjà compilé avec ce secret. Les compilateurs, le Setup et les processus applicatifs ne le reçoivent pas.
 

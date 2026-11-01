@@ -1369,6 +1369,12 @@ async fn updates_scenario(
         eprintln!("Updates : phase du journal avant nettoyage synthétique : {phase:?}");
     }
     let stopped = crate::update_flow::stop_fixture(&installation, &data, port).await;
+    if let Err(error) = &stopped {
+        eprintln!(
+            "Updates : échec du nettoyage du serveur local : {}",
+            atelier_app::infrastructure::local_http::transport_error_details(error.as_ref())
+        );
+    }
     result?;
     stopped?;
     Ok(())
