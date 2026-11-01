@@ -3329,6 +3329,33 @@ async fn projects_scenario(
         .await?;
     click(client, "#project-edit-access .authorize-project-repository").await?;
     wait_dom(client, "return document.querySelector('#project-edit-access .request-revoke-repository')?.getClientRects().length > 0 && !document.querySelector('#project-edit-access .request-revoke-repository').disabled;", vec![]).await?;
+    wait_dom(
+        client,
+        "return !document.querySelector('#save-project').disabled;",
+        vec![],
+    )
+    .await?;
+    let project_path = format!("{address}/api/projects/{project_id}");
+    let referenced_project: serde_json::Value = http
+        .patch(&project_path)
+        .bearer_auth(token)
+        .header("x-local-request", "1")
+        .json(&json!({"repo":access_repo,"expected":{"repo":previous_repo}}))
+        .send()
+        .await?
+        .checked_status()
+        .await?
+        .json()
+        .await?;
+    let before_revoke: serde_json::Value = http
+        .get(format!("{address}/api/state"))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .checked_status()
+        .await?
+        .json()
+        .await?;
     let registered: serde_json::Value = http
         .get(format!("{address}/api/repositories"))
         .bearer_auth(token)
@@ -3413,6 +3440,29 @@ async fn projects_scenario(
             )),
         "Confirmed revocation must remove the selected repository access"
     );
+    let after_state: serde_json::Value = http
+        .get(format!("{address}/api/state"))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .checked_status()
+        .await?
+        .json()
+        .await?;
+    for collection in ["projects", "cards", "settings"] {
+        assert_eq!(
+            before_revoke[collection], after_state[collection],
+            "Revocation must preserve {collection}"
+        );
+    }
+    http.patch(&project_path)
+        .bearer_auth(token)
+        .header("x-local-request", "1")
+        .json(&json!({"repo":previous_repo,"expected":{"repo":referenced_project["repo"]}}))
+        .send()
+        .await?
+        .checked_status()
+        .await?;
     clear_input(client, "#project-repo").await?;
     client
         .find(Locator::Css("#project-repo"))

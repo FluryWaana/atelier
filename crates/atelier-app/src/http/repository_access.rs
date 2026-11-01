@@ -70,26 +70,13 @@ pub(super) async fn revoke(State(state): State<Shared>, request: Request) -> Res
     response(
         state
             .database
-            .call(move |store| {
-                let mut in_use = repository_access::references(
-                    &store.settings::<serde_json::Value>()?,
-                    &input.path,
-                );
-                for table in [
-                    crate::infrastructure::store::Documents::Projects,
-                    crate::infrastructure::store::Documents::Cards,
-                ] {
-                    for value in store.documents::<serde_json::Value>(table)? {
-                        in_use |= repository_access::references(&value, &input.path);
-                    }
-                }
+            .call(move |_| {
                 Ok(public(
                     repository_access::revoke(
                         &root,
                         &input.path,
                         input.expected_revision,
                         input.confirmed,
-                        in_use,
                     )?,
                     true,
                 ))

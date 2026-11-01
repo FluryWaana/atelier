@@ -12,6 +12,8 @@ The editor groups settings into General, Agent, Launch and Automation tabs. Valu
 
 Removing a project requires its exact name and can archive its tasks. The Git directory remains on disk. Repository access is a separate explicit authorization.
 
+Revoking repository authorization preserves saved projects, tasks and files. New access to an external repository requires authorization again. Running operations and concurrent writes must finish before authorization can be revoked.
+
 ## Tasks and the board
 
 Create, edit, duplicate, archive or delete tasks. Tasks hold descriptions, instructions, criteria, dependencies and project or ticket links. Search and project filters find work across the board and archives.

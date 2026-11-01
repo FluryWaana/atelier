@@ -191,21 +191,10 @@ pub(super) fn register_checked(
     Ok(registry)
 }
 
-pub fn revoke(
-    root: &Dir,
-    path: &str,
-    expected: u64,
-    confirmed: bool,
-    in_use: bool,
-) -> Result<Registry> {
+pub fn revoke(root: &Dir, path: &str, expected: u64, confirmed: bool) -> Result<Registry> {
     let selected = path_string(Path::new(path));
     if !confirmed {
         return Err("message.confirm_removal_of_this_local_authorization".into());
-    }
-    if in_use {
-        return Err(
-            "message.this_repository_is_still_referenced_by_settings_projects_or_task".into(),
-        );
     }
     let mut registry = read(root)?;
     if registry.revision != expected {
@@ -230,15 +219,4 @@ pub fn revoke(
         false,
     )?;
     Ok(registry)
-}
-
-pub fn references(value: &serde_json::Value, path: &str) -> bool {
-    match value {
-        serde_json::Value::String(value) => {
-            atelier_core::domain::projects::same_repository(value, path, cfg!(windows))
-        }
-        serde_json::Value::Array(values) => values.iter().any(|value| references(value, path)),
-        serde_json::Value::Object(values) => values.values().any(|value| references(value, path)),
-        _ => false,
-    }
 }
