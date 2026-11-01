@@ -3308,6 +3308,117 @@ async fn projects_scenario(
         )?;
     }
     client.set_window_size(1440, 1000).await?;
+    let access_repo = data.join("repositories/access-ui");
+    std::fs::create_dir_all(&access_repo)?;
+    run(command("git")
+        .current_dir(&access_repo)
+        .env("GIT_CONFIG_GLOBAL", "NUL")
+        .env("GIT_CONFIG_SYSTEM", "NUL")
+        .args(["init", "-b", "main"]))?;
+    let previous_repo = client
+        .execute(
+            "return document.querySelector('#project-repo').value;",
+            vec![],
+        )
+        .await?;
+    clear_input(client, "#project-repo").await?;
+    client
+        .find(Locator::Css("#project-repo"))
+        .await?
+        .send_keys(&access_repo.to_string_lossy())
+        .await?;
+    click(client, "#project-edit-access .authorize-project-repository").await?;
+    wait_dom(client, "return document.querySelector('#project-edit-access .request-revoke-repository')?.getClientRects().length > 0 && !document.querySelector('#project-edit-access .request-revoke-repository').disabled;", vec![]).await?;
+    let registered: serde_json::Value = http
+        .get(format!("{address}/api/repositories"))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .checked_status()
+        .await?
+        .json()
+        .await?;
+    std::fs::write(
+        root().join(".artifacts/rust-ui-project-access.png"),
+        client.screenshot().await?,
+    )?;
+    click(client, "#project-edit-access .request-revoke-repository").await?;
+    // A refresh of unrelated draft fields must not dismiss this confirmation.
+    client.execute("document.querySelector('#project-name').dispatchEvent(new Event('input',{bubbles:true}));", vec![]).await?;
+    wait_dom(client, "const dialog=document.querySelector('dialog.ui-confirmation[open]');return dialog?.matches(':modal') && !dialog.querySelector('input[type=checkbox]') && document.activeElement?.hasAttribute('data-confirmation-cancel');", vec![]).await?;
+    std::fs::write(
+        root().join(".artifacts/rust-ui-project-revoke.png"),
+        client.screenshot().await?,
+    )?;
+    click(
+        client,
+        "dialog.ui-confirmation[open] [data-confirmation-cancel]",
+    )
+    .await?;
+    wait_dom(client, "return !document.querySelector('dialog.ui-confirmation[open]') && document.activeElement?.classList.contains('request-revoke-repository');", vec![]).await?;
+    let after_cancel: serde_json::Value = http
+        .get(format!("{address}/api/repositories"))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .checked_status()
+        .await?
+        .json()
+        .await?;
+    assert_eq!(
+        registered, after_cancel,
+        "Cancelling must preserve repository access"
+    );
+    click(client, "#project-edit-access .request-revoke-repository").await?;
+    client.execute(r#"
+        window.__revokeFetch = window.fetch;
+        window.fetch = async (...args) => {
+            const url = typeof args[0] === 'string' ? args[0] : args[0].url;
+            const method = args[1]?.method || args[0]?.method || 'GET';
+            if (new URL(url, location.href).pathname === '/api/repositories' && method === 'DELETE') {
+                return new Response(JSON.stringify({error:'message.repository_access_check_failed'}), {status:503, headers:{'content-type':'application/json'}});
+            }
+            return window.__revokeFetch(...args);
+        };
+    "#, vec![]).await?;
+    click(client, "dialog.ui-confirmation[open] .revoke-repository").await?;
+    let failed_revoke = wait_dom(client, "const dialog=document.querySelector('dialog.ui-confirmation[open]');return dialog?.getAttribute('aria-busy') === 'false' && dialog.querySelector('.error')?.textContent.trim().length > 0;", vec![]).await;
+    client
+        .execute(
+            "window.fetch=window.__revokeFetch;delete window.__revokeFetch;",
+            vec![],
+        )
+        .await?;
+    failed_revoke?;
+    click(client, "dialog.ui-confirmation[open] .revoke-repository").await?;
+    wait_dom(client, "return !document.querySelector('dialog.ui-confirmation[open]') && document.querySelector('#project-edit-access .authorize-project-repository')?.getClientRects().length > 0 && !document.querySelector('#project-edit-access .authorize-project-repository').disabled;", vec![]).await?;
+    let after_revoke: serde_json::Value = http
+        .get(format!("{address}/api/repositories"))
+        .bearer_auth(token)
+        .send()
+        .await?
+        .checked_status()
+        .await?
+        .json()
+        .await?;
+    assert!(
+        !after_revoke["repositories"]
+            .as_array()
+            .ok_or("Repository registry absent")?
+            .iter()
+            .any(|value| atelier_core::domain::projects::same_repository(
+                value.as_str().unwrap_or_default(),
+                &access_repo.to_string_lossy(),
+                cfg!(windows)
+            )),
+        "Confirmed revocation must remove the selected repository access"
+    );
+    clear_input(client, "#project-repo").await?;
+    client
+        .find(Locator::Css("#project-repo"))
+        .await?
+        .send_keys(previous_repo.as_str().ok_or("Previous repository absent")?)
+        .await?;
     click(client, "#reset-project").await?;
     wait_dom(client, "return document.querySelector('#project-settings-panel')?.hidden === true && !document.querySelector('#project-confirmation-dialog');", vec![]).await?;
     click(

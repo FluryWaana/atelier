@@ -20,6 +20,7 @@ pub fn RepositoryAccess(
     #[prop(optional)] on_authorized: Option<Callback<String>>,
 ) -> impl IntoView {
     let i18n = expect_context::<I18n>();
+    let path = Memo::new(move |_| path.get());
     let registry = RwSignal::new(None::<Registry>);
     let remove_ack = RwSignal::new(String::new());
     let loading = RwSignal::new(false);
@@ -73,7 +74,7 @@ pub fn RepositoryAccess(
     });
     Effect::new(move |_| {
         let selected = path.get();
-        if !pending.get() && !selected.trim().is_empty() {
+        if !pending.get() && remove_ack.get_untracked().is_empty() && !selected.trim().is_empty() {
             load.with_value(|load| load());
         }
     });
@@ -100,7 +101,6 @@ pub fn RepositoryAccess(
         };
         let body = serde_json::json!({"path":selected,"expectedRevision":current.revision,"confirmed":true});
         pending.set(true);
-        remove_ack.set(String::new());
         error.set(String::new());
         let alive = revoking.clone();
         spawn_local(async move {
@@ -114,7 +114,10 @@ pub fn RepositoryAccess(
             .await;
             if alive.get() {
                 match result {
-                    Ok(value) => registry.set(Some(value)),
+                    Ok(value) => {
+                        registry.set(Some(value));
+                        remove_ack.set(String::new());
+                    }
                     Err(message) => error.set(message),
                 }
                 pending.set(false);
@@ -233,39 +236,51 @@ pub fn RepositoryAccess(
             <p hidden={move || {
                 registry.get().is_none_or(|registry| registry.available)
             }}>{move || i18n.text("message.authorize_repositories_from_the_native_launcher")}</p>
-            <details hidden={move || !authorized.get()}>
-                <summary>{move || i18n.text("message.remove_authorization")}</summary>
-                <label>
-                    <crate::form::Checkbox
+            <crate::button::Button
+                disabled={Signal::derive(move || pending.get() || loading.get())}
+                class="request-revoke-repository"
+                {..}
+                type="button"
+                hidden={move || !authorized.get()}
+                on:click={move |_| {
+                    error.set(String::new());
+                    remove_ack.set(path.get_untracked());
+                }}
+            >
+                {move || i18n.text("message.remove_authorization")}
+            </crate::button::Button>
+            <crate::modal::Confirmation
+                open={Signal::derive(move || !remove_ack.get().is_empty())}
+                busy={Signal::derive(move || pending.get())}
+                error={Signal::derive(error_text)}
+                on_close={Callback::new(move |()| remove_ack.set(String::new()))}
+            >
+                <p>{move || i18n.text("message.remove_only_this_local_authorization_without_deleting_the_reposi")}</p>
+                <p class="repository-revoke-path">{move || remove_ack.get()}</p>
+                <crate::modal::ModalActions>
+                    <crate::button::Button
+                        disabled={Signal::derive(move || pending.get())}
                         {..}
-                        class="confirm-revoke-repository"
-                        disabled={move || pending.get() || loading.get()}
-                        prop:checked={move || remove_ack.get() == path.get()}
-                        on:change={move |event| {
-                            remove_ack
-                                .set(
-                                    if event_target_checked(&event) {
-                                        path.get_untracked()
-                                    } else {
-                                        String::new()
-                                    },
-                                )
-                        }}
-                    />
-                    {move || {
-                        i18n.text("message.remove_only_this_local_authorization_without_deleting_the_reposi")
-                    }}
-                </label>
-                <crate::button::Button
-                    disabled={Signal::derive(move || pending.get() || loading.get() || remove_ack.get() != path.get())}
-                    class="revoke-repository"
-                    {..}
-                    type="button"
-                    on:click={move |_| revoke.with_value(|revoke| revoke(path.get_untracked()))}
-                >
-                    {move || i18n.text("message.remove_authorization")}
-                </crate::button::Button>
-            </details>
+                        type="button"
+                        data-confirmation-cancel=""
+                        autofocus=true
+                        on:click={move |_| remove_ack.set(String::new())}
+                    >
+                        {move || i18n.text("message.cancel")}
+                    </crate::button::Button>
+                    <crate::button::Button
+                        variant={crate::button::ButtonVariant::Danger}
+                        busy={Signal::derive(move || pending.get())}
+                        disabled={Signal::derive(move || loading.get() || !authorized.get() || remove_ack.get() != path.get())}
+                        class="revoke-repository"
+                        {..}
+                        type="button"
+                        on:click={move |_| revoke.with_value(|revoke| revoke(remove_ack.get_untracked()))}
+                    >
+                        {move || i18n.text("message.remove_authorization")}
+                    </crate::button::Button>
+                </crate::modal::ModalActions>
+            </crate::modal::Confirmation>
             <crate::button::Button
                 disabled={Signal::derive(move || pending.get() || loading.get())}
                 class="retry-repository-access"

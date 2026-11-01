@@ -853,6 +853,7 @@ dialog::backdrop { background: rgb(0 0 0 / .75); backdrop-filter: none; }
 #project-settings-form [role=tabpanel] > label[for]:first-child { margin-top: 0; }
 #project-settings-form :is(input:not([type=checkbox]), select, textarea) { width: 100%; }
 .project-detail .repository-access { margin-block: 16px 24px; }
+.repository-revoke-path { overflow-wrap: anywhere; color: var(--muted); font-size: 13px; line-height: 1.65; }
 .project-detail :is(.hint, .field-help) { line-height: 1.65; }
 .projects-page #project-settings-form .form-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 12px; position: static; padding: 20px 0 0; margin: 24px 0 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; }
 #project-settings-form .form-actions button { margin: 0; }
