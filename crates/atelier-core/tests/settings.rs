@@ -1,10 +1,9 @@
+use super::json;
 use atelier_core::{
     application::settings::{config, prepare_update, public_config, remove_token},
     document::Document,
     domain::text,
 };
-#[path = "support/json.rs"]
-mod json;
 
 #[test]
 fn global_jira_mappings_require_exact_mapping_and_connection_preconditions() {

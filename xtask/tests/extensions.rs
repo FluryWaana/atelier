@@ -3,9 +3,8 @@ use atelier_core::application::extensions::{Manifest, Method, PROTOCOL, Request,
 use serde_json::{Value, json};
 use std::{collections::BTreeMap, path::PathBuf, time::Duration};
 static EXTENSION_FIXTURE: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
-#[path = "support/windows.rs"]
 #[cfg(windows)]
-mod windows;
+use super::windows;
 
 #[tokio::test]
 async fn a_lost_process_reply_is_reconciled_without_replaying_its_synthetic_effect() {

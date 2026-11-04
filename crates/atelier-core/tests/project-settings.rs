@@ -1,6 +1,5 @@
+use super::json;
 use atelier_core::{document::Document, domain::projects::project_settings};
-#[path = "support/json.rs"]
-mod json;
 
 #[test]
 fn project_settings_preserve_unicode_paths_and_error_precedence() {

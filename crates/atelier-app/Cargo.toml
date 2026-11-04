@@ -4,6 +4,27 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
+autotests = false
+
+[[test]]
+name = "integration"
+path = "tests/integration.rs"
+
+[[test]]
+name = "launcher"
+path = "tests/launcher.rs"
+
+[[test]]
+name = "native-import"
+path = "tests/native-import.rs"
+
+[[test]]
+name = "native-tray"
+path = "tests/native-tray.rs"
+
+[[test]]
+name = "synthetic-tls"
+path = "tests/synthetic-tls.rs"
 
 [[bin]]
 name = "atelier"

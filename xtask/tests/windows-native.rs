@@ -1,7 +1,6 @@
 #![cfg(windows)]
 
-#[path = "support/windows.rs"]
-mod windows;
+use super::windows;
 
 use std::{
     io::{BufRead, BufReader, Write},

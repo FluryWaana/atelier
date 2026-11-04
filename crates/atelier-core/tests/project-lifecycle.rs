@@ -73,8 +73,7 @@ fn jira_mapping_edits_preserve_unrelated_fields_and_reject_stale_snapshots() {
         );
     }
 }
-#[path = "support/json.rs"]
-mod json;
+use super::json;
 
 #[test]
 fn jira_mapping_only_suggests_one_available_unambiguous_transition() {

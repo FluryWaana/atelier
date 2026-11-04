@@ -1,3 +1,4 @@
+use super::json;
 use atelier_core::Result;
 use atelier_core::{
     application::task_creation::{self, CreationContext},
@@ -7,11 +8,9 @@ use atelier_core::{
         text,
     },
 };
+use json::equivalent;
 use serde_json::value::RawValue;
 use std::cell::{Cell, RefCell};
-#[path = "support/json.rs"]
-mod json;
-use json::equivalent;
 
 #[test]
 fn default_agent_validates_repository_text_and_matches_native_paths() {

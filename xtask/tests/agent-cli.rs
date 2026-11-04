@@ -1,4 +1,5 @@
 #![cfg(windows)]
+use super::windows;
 use atelier_app::infrastructure::{agent_cli::Catalog, process_tree};
 use atelier_core::{
     application::{
@@ -22,8 +23,6 @@ use std::{
     },
     time::Duration,
 };
-#[path = "support/windows.rs"]
-mod windows;
 
 #[derive(Clone)]
 struct Published(Arc<AtomicUsize>);

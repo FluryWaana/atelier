@@ -1778,13 +1778,14 @@ async fn empty_repository_paths_resolve_the_synthetic_working_directory() {
     } else {
         // Isolate cwd in a child so concurrent tests cannot observe a process-wide directory change.
         let directory = tempfile::tempdir().unwrap();
+        let test_name = concat!(
+            module_path!(),
+            "::empty_repository_paths_resolve_the_synthetic_working_directory"
+        );
+        let (_, test_name) = test_name.split_once("::").unwrap();
         let mut command = std::process::Command::new(std::env::current_exe().unwrap());
         command
-            .args([
-                "--exact",
-                "empty_repository_paths_resolve_the_synthetic_working_directory",
-                "--nocapture",
-            ])
+            .args(["--exact", test_name, "--nocapture"])
             .current_dir(directory.path())
             .env(CHILD, directory.path());
         #[cfg(windows)]
@@ -1798,6 +1799,10 @@ async fn empty_repository_paths_resolve_the_synthetic_working_directory() {
             "{}\n{}",
             String::from_utf8_lossy(&output.stdout),
             String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(
+            String::from_utf8_lossy(&output.stdout).contains("test result: ok. 1 passed;"),
+            "The isolated working-directory check did not execute: {output:?}"
         );
     }
 }

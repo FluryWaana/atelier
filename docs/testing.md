@@ -2,6 +2,22 @@
 
 The test suite covers domain rules, native adapters, browser journeys, packages and desktop interactions. Use synthetic fixtures and a separate workspace for every integration test.
 
+## Focused checks
+
+Each crate groups ordinary integration tests in the `integration` target. Select a module or test name while developing:
+
+```sh
+cargo test -p atelier-core --test integration project_settings:: --locked
+cargo test -p atelier-app --test integration prototype::interface_language --locked
+cargo test -p xtask --test integration translations:: --locked
+```
+
+Register new test modules in `tests/integration.rs`. The source registration test rejects missing or duplicate entries. Native desktop and TLS campaigns retain separate targets and their isolation guards. Launcher tests retain their own process for strict shutdown and loopback readiness checks. Agent account diagnostics also retain a separate target because they share process-wide concurrency limits.
+
+Cargo runs tests within each target in parallel. Use `-- --test-threads=4` to limit simultaneous tests, and `CARGO_BUILD_JOBS=4` to limit compiler jobs. These settings do not set processor affinity for child processes.
+
+Development and test builds omit debug symbols by default to reduce compilation, linking and executable size. Panic locations remain available. For source-level debugging, set `CARGO_PROFILE_DEV_DEBUG=2` or `CARGO_PROFILE_TEST_DEBUG=2` before the corresponding command. Release builds are unchanged.
+
 ## Local source checks
 
 Run from the repository root with the committed toolchain and lockfile:

@@ -94,7 +94,6 @@ fn build_ui(dev: bool) -> Result<()> {
         trunk
             .arg("--dist")
             .arg(&directory)
-            .env("CARGO_PROFILE_DEV_DEBUG", "0")
             .env("CARGO_PROFILE_DEV_INCREMENTAL", "true");
     } else {
         trunk.arg("--release");

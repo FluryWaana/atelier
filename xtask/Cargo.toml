@@ -5,6 +5,19 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
+autotests = false
+
+[[test]]
+name = "integration"
+path = "tests/integration.rs"
+
+[[test]]
+name = "agent-account"
+path = "tests/agent-account.rs"
+
+[[test]]
+name = "forge-review-tls"
+path = "tests/forge-review-tls.rs"
 
 [dependencies]
 axum = "=0.8.9"

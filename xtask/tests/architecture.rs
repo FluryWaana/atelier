@@ -1,5 +1,38 @@
 use std::{fs, path::Path};
 
+#[test]
+fn every_integration_source_is_registered_once() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
+    for crate_path in ["crates/atelier-core", "crates/atelier-app", "xtask"] {
+        let directory = root.join(crate_path);
+        let manifest = fs::read_to_string(directory.join("Cargo.toml")).unwrap();
+        let registry = fs::read_to_string(directory.join("tests/integration.rs")).unwrap();
+        for entry in fs::read_dir(directory.join("tests")).unwrap() {
+            let path = entry.unwrap().path();
+            if path.extension().is_none_or(|extension| extension != "rs") {
+                continue;
+            }
+            let name = path.file_name().unwrap().to_str().unwrap();
+            let module = format!("#[path = \"{name}\"]");
+            let target = format!("path = \"tests/{name}\"");
+            let registrations = registry
+                .lines()
+                .filter(|line| line.trim() == module)
+                .count()
+                + manifest
+                    .lines()
+                    .filter(|line| line.trim() == target)
+                    .count();
+            assert_eq!(
+                registrations,
+                1,
+                "Missing or duplicate integration source: {}",
+                path.display()
+            );
+        }
+    }
+}
+
 fn rust_sources(directory: &Path) -> Vec<std::path::PathBuf> {
     let mut sources = Vec::new();
     for entry in fs::read_dir(directory).unwrap() {

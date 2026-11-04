@@ -1,3 +1,4 @@
+use super::json;
 use atelier_core::Result;
 use atelier_core::{
     application::{
@@ -11,8 +12,6 @@ use atelier_core::{
 };
 use serde_json::value::RawValue;
 use std::cell::RefCell;
-#[path = "support/json.rs"]
-mod json;
 
 struct Context {
     scenario: Document,

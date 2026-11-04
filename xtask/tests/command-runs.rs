@@ -1,7 +1,6 @@
 #![cfg(windows)]
 
-#[path = "support/windows.rs"]
-mod windows;
+use super::windows;
 
 use atelier_app::infrastructure::{
     command_runs::CommandRuns, database::Database, files::Repository,

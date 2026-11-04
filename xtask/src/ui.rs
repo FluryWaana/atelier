@@ -387,23 +387,20 @@ pub async fn test(prepared_assets: bool, prepared_binaries: bool) -> Result<()> 
                 .join(format!("native-fixture{}", std::env::consts::EXE_SUFFIX)),
         ])?;
     }
-    if !prepared_binaries && std::env::var_os("ATELIER_TEST_SERVER").is_none() {
-        run(command("cargo").env("CARGO_PROFILE_DEV_DEBUG", "0").args([
-            "build",
-            "--locked",
-            "-p",
-            "atelier-app",
-        ]))?;
-    }
     if !prepared_binaries {
-        run(command("cargo").args([
+        let mut build = command("cargo");
+        build.args([
             "build",
             "--locked",
             "-p",
             "xtask",
             "--bin",
             "native-fixture",
-        ]))?;
+        ]);
+        if std::env::var_os("ATELIER_TEST_SERVER").is_none() {
+            build.args(["-p", "atelier-app", "--bin", "atelier"]);
+        }
+        run(&mut build)?;
     }
     let driver_program = std::env::var_os("ATELIER_WEBDRIVER").unwrap_or(default_driver.into());
     let driver_port = free_port()?;

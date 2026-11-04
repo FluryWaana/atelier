@@ -1,8 +1,7 @@
+use super::json;
 use atelier_core::Result;
 use atelier_core::{application::projects, document::Document, domain::text};
 use std::cell::RefCell;
-#[path = "support/json.rs"]
-mod json;
 
 #[test]
 fn project_detection_preserves_sources_drafts_roles_caching_and_unicode() {

@@ -1,6 +1,5 @@
+use super::json;
 use atelier_core::{document::Document, domain::agent_options::provider_settings};
-#[path = "support/json.rs"]
-mod json;
 
 #[test]
 fn provider_settings_preserve_unicode_and_validation() {
