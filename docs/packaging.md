@@ -95,6 +95,8 @@ Data locations and first launch behavior are documented in [launch and data](lau
 
 The Updates screen checks the latest stable release of `FluryWaana/atelier`. It accepts numeric `VERSION` or `vVERSION` tags with three components and offers only newer versions. Prereleases are excluded from this stable channel.
 
+Publication starts with a Windows prerelease. Once all five platform distributions are qualified and uploaded, the completion workflow marks the release as latest and removes its prerelease flag. Installed versions can then discover it through the Updates screen. The application remains in preproduction.
+
 A compatible release must provide the target archive and signed metadata in the same release and repository. Download redirects are restricted to permitted GitHub HTTPS hosts. URLs, response sizes and duration are bounded. No GitHub token or replacement trust key is requested from the user.
 
 The server rereads the selected release before download. Signed metadata is authenticated before downloading the archive. Archive size and hashes are then checked by the package preparer. Progress reports actual received bytes and the signed total. Only one download can run per installation.

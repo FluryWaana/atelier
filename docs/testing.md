@@ -83,7 +83,7 @@ The repository contains three workflows with manual triggers:
 | --- | --- |
 | [Rust verification](../.github/workflows/rust.yml) | Source checks, native tests, browsers and delivery qualification |
 | [Windows prerelease](../.github/workflows/prerelease.yml) | Signed Windows distribution from an exact qualified source run |
-| [Linux and macOS prerelease](../.github/workflows/unix-prerelease.yml) | Complete platform assets for an existing prerelease |
+| [Linux and macOS release](../.github/workflows/unix-prerelease.yml) | Complete platform assets and publish the qualified release to the update channel |
 
 Rust verification accepts these selections:
 

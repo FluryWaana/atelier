@@ -16,7 +16,7 @@
 <p align="center">
   <a href="https://github.com/FluryWaana/atelier/actions/workflows/rust.yml"><img src="https://github.com/FluryWaana/atelier/actions/workflows/rust.yml/badge.svg" alt="Rust verification pipeline"></a>
   <a href="https://github.com/FluryWaana/atelier/actions/workflows/prerelease.yml"><img src="https://github.com/FluryWaana/atelier/actions/workflows/prerelease.yml/badge.svg" alt="Windows prerelease pipeline"></a>
-  <a href="https://github.com/FluryWaana/atelier/actions/workflows/unix-prerelease.yml"><img src="https://github.com/FluryWaana/atelier/actions/workflows/unix-prerelease.yml/badge.svg" alt="Linux and macOS prerelease pipeline"></a>
+  <a href="https://github.com/FluryWaana/atelier/actions/workflows/unix-prerelease.yml"><img src="https://github.com/FluryWaana/atelier/actions/workflows/unix-prerelease.yml/badge.svg" alt="Linux and macOS release pipeline"></a>
 </p>
 
 Atelier Kanban brings planning and implementation into one workspace on your computer. Organize tasks, prepare a Git worktree, run a coding agent, inspect its changes and record your own time. Your tasks and time tracking work locally without an external account.

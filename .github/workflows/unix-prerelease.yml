@@ -1,4 +1,4 @@
-name: Complete Linux and macOS prerelease
+name: Complete Linux and macOS release
 on:
   workflow_dispatch:
     inputs:
@@ -190,7 +190,7 @@ jobs:
           done
           gh release upload "$RELEASE_TAG" ./*
           cat > "$RUNNER_TEMP/release-notes.txt" <<'NOTES'
-          Atelier Kanban preview for Windows x64, Linux x64 and ARM64, and macOS Intel and Apple Silicon.
+          Atelier Kanban for Windows x64, Linux x64 and ARM64, and macOS Intel and Apple Silicon.
 
           Windows provides a Setup installer. Linux provides DEB and RPM packages. Each target includes an update archive and signed metadata. An update archive is a payload, not an initialized portable installation. Follow the portable installation instructions for macOS or when using an archive directly.
 
@@ -198,10 +198,10 @@ jobs:
 
           Windows executables do not have an Authenticode certificate. macOS applications do not have an Apple Developer ID signature or notarization. SmartScreen and Gatekeeper can display warnings. Unsupported workspace formats are refused without conversion or deletion.
 
-          This is a prerelease. The application's stable update channel does not offer prereleases.
+          The application remains in preproduction. This complete release is available through the application's update check.
 
           [Getting started](https://github.com/FluryWaana/atelier/blob/main/docs/getting-started.md)
           [Installation and updates](https://github.com/FluryWaana/atelier/blob/main/docs/packaging.md)
           [Security](https://github.com/FluryWaana/atelier/blob/main/SECURITY.md)
           NOTES
-          gh release edit "$RELEASE_TAG" --prerelease --latest=false --title "Atelier Kanban $RELEASE_TAG preview" --notes-file "$RUNNER_TEMP/release-notes.txt"
+          gh release edit "$RELEASE_TAG" --prerelease=false --latest --title "Atelier Kanban $RELEASE_TAG" --notes-file "$RUNNER_TEMP/release-notes.txt"
