@@ -162,15 +162,8 @@ pub(super) async fn stop_owned(data: &Path, port: u16, owner: Option<u32>) -> Re
     if !response.status.is_success() {
         return Err("Arrêt d’Atelier refusé ; les opérations en cours sont conservées.".into());
     }
-    loop {
-        if health(&http, data, port).await?.is_none() {
-            return wait_for_data_close(data, deadline).await;
-        }
-        if Instant::now() >= deadline {
-            return Err("Le serveur Atelier n’a pas confirmé son arrêt.".into());
-        }
-        tokio::time::sleep(Duration::from_millis(100)).await;
-    }
+    // The server releases its data lock after draining HTTP and closing its workers and database.
+    wait_for_data_close(data, deadline).await
 }
 
 async fn wait_for_data_close(data: &Path, deadline: Instant) -> Result<()> {
@@ -439,17 +432,66 @@ mod tests {
         }
     }
     #[tokio::test]
-    async fn shutdown_waits_for_data_lock_release_without_touching_business_data() {
+    async fn accepted_shutdown_waits_for_data_close_without_requiring_more_http_responses() {
+        use std::sync::atomic::AtomicBool;
         let root = tempfile::tempdir().unwrap();
         let lock = super::super::data_lock::DataLock::acquire(root.path()).unwrap();
+        let token = session::new_token().unwrap();
+        session::write(root.path(), &token).unwrap();
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let closing = Arc::new(AtomicBool::new(false));
+        let health_closing = closing.clone();
+        let health_token = token.clone();
         let data = root.path().to_owned();
-        let waiting = tokio::spawn(async move {
-            wait_for_data_close(&data, Instant::now() + Duration::from_secs(2)).await
-        });
-        tokio::time::sleep(Duration::from_millis(100)).await;
-        assert!(!waiting.is_finished());
+        let router = Router::new()
+            .route("/api/health", get(move |Query(query): Query<HashMap<String, String>>, headers: HeaderMap| {
+                let closing = health_closing.clone();
+                let token = health_token.clone();
+                let data = data.clone();
+                async move {
+                    if closing.load(Ordering::SeqCst) {
+                        return axum::http::StatusCode::SERVICE_UNAVAILABLE.into_response();
+                    }
+                    if let Some(challenge) = query.get("challenge") {
+                        assert!(!headers.contains_key(AUTHORIZATION));
+                        return Json(serde_json::json!({"proof": session::proof(&token, challenge, port).unwrap()})).into_response();
+                    }
+                    assert_eq!(headers[AUTHORIZATION], format!("Bearer {token}"));
+                    Json(serde_json::json!({"app":"atelier-kanban","protocol":"atelier-local/1","pid":std::process::id(),"dataDirectory":data})).into_response()
+                }
+            }))
+            .route("/api/shutdown", axum::routing::post({
+                let closing = closing.clone();
+                move |headers: HeaderMap| {
+                    let closing = closing.clone();
+                    let token = token.clone();
+                    async move {
+                        assert_eq!(headers[AUTHORIZATION], format!("Bearer {token}"));
+                        assert_eq!(headers["x-local-request"], "1");
+                        closing.store(true, Ordering::SeqCst);
+                        axum::http::StatusCode::OK
+                    }
+                }
+            }));
+        let server = tokio::spawn(async { axum::serve(listener, router).await.unwrap() });
+        let data = root.path().to_owned();
+        let stopping = tokio::spawn(async move { stop(&data, port).await });
+        tokio::time::timeout(Duration::from_secs(2), async {
+            while !closing.load(Ordering::SeqCst) {
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .unwrap();
+        assert!(!stopping.is_finished());
         drop(lock);
-        waiting.await.unwrap().unwrap();
+        tokio::time::timeout(Duration::from_secs(2), stopping)
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap();
+        server.abort();
         assert!(!root.path().join("kanban.sqlite").exists());
         let absent = root.path().join("never-created");
         wait_for_data_close(&absent, Instant::now()).await.unwrap();
