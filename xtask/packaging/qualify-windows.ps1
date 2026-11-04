@@ -45,7 +45,15 @@ try {
   Invoke-Owned $setups[0].FullName ($silent + @("/DIR=$app", "/LOG=$(Join-Path $deliveryRoot 'setup-install.log')"))
   $binary = Join-Path $app 'atelier.exe'
   Invoke-Owned $binary @('verify-installation')
-  Invoke-Owned 'pwsh' @('-NoLogo', '-NoProfile', '-NonInteractive', '-File', (Join-Path $PSScriptRoot 'qualify-default-launch-windows.ps1'), '-Binary', $binary) $true 180000
+  try {
+    Invoke-Owned 'pwsh' @('-NoLogo', '-NoProfile', '-NonInteractive', '-File', (Join-Path $PSScriptRoot 'qualify-default-launch-windows.ps1'), '-Binary', $binary) $true 180000
+  } finally {
+    $launchFailure = Join-Path $fixture 'default-launch-qualification-error.log'
+    if (Test-Path -LiteralPath $launchFailure -PathType Leaf) {
+      Copy-Item -LiteralPath $launchFailure -Destination (Join-Path $deliveryRoot 'default-launch-qualification-error.log') -ErrorAction Continue
+      Get-Content -LiteralPath $launchFailure -ErrorAction Continue
+    }
+  }
   Invoke-Owned $binary @('launch', '--data-dir', $data, '--port', "$port", '--no-browser')
   $launched = $true
   $uninstallers = @(Get-ChildItem -LiteralPath $app -Filter 'unins*.exe' -File)

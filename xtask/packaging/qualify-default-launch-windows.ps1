@@ -14,6 +14,14 @@ while ($true) {
 }
 if (-not (Test-Path -LiteralPath $Binary -PathType Leaf)) { throw 'Installed binary missing.' }
 $app = [IO.Path]::GetDirectoryName($Binary)
+$failureLog = Join-Path ([IO.Path]::GetDirectoryName($app)) 'default-launch-qualification-error.log'
+$qualificationPhase = 'shortcut and installed executable preflight'
+$probeFailure = ''
+trap {
+  $details = if ($probeFailure) { $probeFailure } else { "Phase: $qualificationPhase`n" + ($_ | Out-String) }
+  $details.Substring(0, [Math]::Min($details.Length, 32768)) | Set-Content -LiteralPath $failureLog -Encoding UTF8
+  exit 1
+}
 $shortcutPath = Join-Path ([Environment]::GetFolderPath('Programs')) 'Atelier Kanban/Atelier Kanban.lnk'
 if (-not (Test-Path -LiteralPath $shortcutPath -PathType Leaf)) { throw 'Installed Start Menu shortcut missing.' }
 $shell = New-Object -ComObject WScript.Shell
@@ -43,6 +51,24 @@ $listener = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, 4317)
 try { $listener.Start() } finally { $listener.Stop() }
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
+
+function Get-OwnedLaunchError([int]$ProcessId) {
+  $condition = [Windows.Automation.AndCondition]::new([Windows.Automation.Condition[]]@(
+    [Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::ProcessIdProperty, $ProcessId),
+    [Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::ClassNameProperty, '#32770'),
+    [Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::NameProperty, 'Atelier Kanban')
+  ))
+  $dialogs = [Windows.Automation.AutomationElement]::RootElement.FindAll([Windows.Automation.TreeScope]::Children, $condition)
+  "Owned launcher PID ${ProcessId}: $($dialogs.Count) dialogs."
+  for ($index = 0; $index -lt [Math]::Min($dialogs.Count, 4); $index++) {
+    $texts = $dialogs[$index].FindAll([Windows.Automation.TreeScope]::Descendants,
+      [Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::ControlTypeProperty, [Windows.Automation.ControlType]::Text))
+    for ($textIndex = 0; $textIndex -lt [Math]::Min($texts.Count, 8); $textIndex++) {
+      $text = $texts[$textIndex].Current.Name
+      $text.Substring(0, [Math]::Min($text.Length, 1024))
+    }
+  }
+}
 
 function Confirm-OwnedWorkspace([Diagnostics.Process]$Parent, [string]$Answer) {
   $deadline = [Diagnostics.Stopwatch]::StartNew()
@@ -78,6 +104,7 @@ function Confirm-OwnedWorkspace([Diagnostics.Process]$Parent, [string]$Answer) {
 }
 
 function Invoke-DefaultLaunchProbe([string]$Profile, [string]$Action = '', [string]$Answer = '') {
+  $script:qualificationPhase = "default launch scenario=$scenario action='$Action' answer='$Answer'"
   $start = [Diagnostics.ProcessStartInfo]::new()
   $start.FileName = $shortcutTarget
   $start.WorkingDirectory = $shortcutDirectory
@@ -109,6 +136,17 @@ function Invoke-DefaultLaunchProbe([string]$Profile, [string]$Action = '', [stri
     # Detached servers can retain unused inherited pipe handles after the launcher has exited.
     # The default Stop probe below verifies their lifecycle without waiting for pipe EOF here.
     if ($process.ExitCode -ne 0) { throw "Default launch failed with exit $($process.ExitCode)." }
+  } catch {
+    if (-not $script:probeFailure) {
+      $script:probeFailure = "Phase: $qualificationPhase`n" + ($_ | Out-String)
+      $probeFailure.Substring(0, [Math]::Min($probeFailure.Length, 32768)) | Set-Content -LiteralPath $failureLog -Encoding UTF8
+      if ($started) {
+        try { $script:probeFailure += "`n" + (Get-OwnedLaunchError $process.Id | Out-String) }
+        catch { $script:probeFailure += "`nOwned launcher dialog evidence unavailable." }
+      }
+      $probeFailure.Substring(0, [Math]::Min($probeFailure.Length, 32768)) | Set-Content -LiteralPath $failureLog -Encoding UTF8
+    }
+    throw
   } finally {
     try {
       if ($started -and -not $process.HasExited) {
