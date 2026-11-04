@@ -26,6 +26,7 @@ pub fn RepositoryAccess(
     let revoke_button = NodeRef::<leptos::html::Button>::new();
     let loading = RwSignal::new(false);
     let error = RwSignal::new(String::new());
+    let read_error = RwSignal::new(String::new());
     let alive = Rc::new(Cell::new(true));
     let mounted = StoredValue::new_local(alive.clone());
     on_cleanup(move || {
@@ -36,6 +37,7 @@ pub fn RepositoryAccess(
     Effect::new(move |_| {
         let _ = path.get();
         remove_ack.set(String::new());
+        error.set(String::new());
     });
     let reading = alive.clone();
     let load = StoredValue::new_local(move || {
@@ -45,11 +47,11 @@ pub fn RepositoryAccess(
         let credential = match token.get_value() {
             Ok(value) => value,
             Err(message) => {
-                error.set(message);
+                read_error.set(message);
                 return;
             }
         };
-        error.set(String::new());
+        read_error.set(String::new());
         loading.set(true);
         let alive = reading.clone();
         spawn_local(async move {
@@ -64,10 +66,10 @@ pub fn RepositoryAccess(
             if alive.get() {
                 match result {
                     Ok(value) => {
-                        error.set(String::new());
+                        read_error.set(String::new());
                         registry.set(Some(value));
                     }
-                    Err(message) => error.set(message),
+                    Err(message) => read_error.set(message),
                 }
                 loading.set(false);
             }
@@ -188,6 +190,11 @@ pub fn RepositoryAccess(
     });
     let error_text = move || {
         let message = error.get();
+        let message = if message.is_empty() {
+            read_error.get()
+        } else {
+            message
+        };
         i18n.text(
             if matches!(
                 message.as_str(),
@@ -292,8 +299,11 @@ pub fn RepositoryAccess(
                 class="retry-repository-access"
                 {..}
                 type="button"
-                hidden={move || error.get().is_empty()}
-                on:click={move |_| load.with_value(|load| load())}
+                hidden={move || error.get().is_empty() && read_error.get().is_empty()}
+                on:click={move |_| {
+                    error.set(String::new());
+                    load.with_value(|load| load());
+                }}
             >
                 {move || i18n.text("message.project_retry")}
             </crate::button::Button>

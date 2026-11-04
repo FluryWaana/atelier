@@ -3356,12 +3356,37 @@ async fn projects_scenario(
             vec![],
         )
         .await?;
+    let missing_repo = data.join("repositories/missing-access-ui");
     clear_input(client, "#project-repo").await?;
-    client
-        .find(Locator::Css("#project-repo"))
-        .await?
-        .send_keys(&access_repo.to_string_lossy())
-        .await?;
+    type_text(client, "#project-repo", &missing_repo.to_string_lossy()).await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#project-repo')?.value === arguments[0];",
+        vec![json!(missing_repo)],
+    )
+    .await?;
+    client.execute(r#"
+        window.__accessFetch = window.fetch;
+        window.__accessReadCompleted = false;
+        window.fetch = async (...args) => {
+            const response = await window.__accessFetch(...args);
+            const url = typeof args[0] === 'string' ? args[0] : args[0].url;
+            const method = args[1]?.method || args[0]?.method || 'GET';
+            if (new URL(url, location.href).pathname === '/api/repositories' && method === 'GET') window.__accessReadCompleted = true;
+            return response;
+        };
+    "#, vec![]).await?;
+    click(client, "#project-edit-access .authorize-project-repository").await?;
+    wait_dom(client, "return window.__accessReadCompleted && document.querySelector('#project-edit-access')?.getAttribute('aria-busy') === 'false' && document.querySelector('#project-edit-access [role=alert]')?.textContent.trim().length > 0 && !document.querySelector('#project-edit-access .authorize-project-repository')?.disabled && document.querySelector('#project-edit-access .request-revoke-repository')?.hidden;", vec![]).await?;
+    client.execute("window.fetch=window.__accessFetch;delete window.__accessFetch;delete window.__accessReadCompleted;", vec![]).await?;
+    clear_input(client, "#project-repo").await?;
+    type_text(client, "#project-repo", &access_repo.to_string_lossy()).await?;
+    wait_dom(
+        client,
+        "return document.querySelector('#project-repo')?.value === arguments[0];",
+        vec![json!(access_repo)],
+    )
+    .await?;
     click(client, "#project-edit-access .authorize-project-repository").await?;
     wait_dom(client, "return document.querySelector('#project-edit-access .request-revoke-repository')?.getClientRects().length > 0 && !document.querySelector('#project-edit-access .request-revoke-repository').disabled;", vec![]).await?;
     wait_dom(
@@ -5107,21 +5132,30 @@ async fn clear_input(client: &Client, selector: &str) -> Result<()> {
 async fn type_text(client: &Client, selector: &str, text: &str) -> Result<()> {
     use fantoccini::actions::{InputSource, KeyAction, KeyActions};
     let element = editable(client, selector).await?;
+    element.click().await?;
     if std::env::var("ATELIER_TEST_BROWSER").as_deref() == Ok("safari") {
         // Safari key actions can lose letters after accented characters.
         element.send_keys(text).await?;
-        return Ok(());
+    } else {
+        // Native keyboard actions also support characters outside ChromeDriver send_keys' BMP limit.
+        let actions = text
+            .chars()
+            .fold(KeyActions::new("text".into()), |actions, value| {
+                actions
+                    .then(KeyAction::Down { value })
+                    .then(KeyAction::Up { value })
+            });
+        client.perform_actions(actions).await?;
     }
-    element.click().await?;
-    // Native keyboard actions also support characters outside ChromeDriver send_keys' BMP limit.
-    let actions = text
-        .chars()
-        .fold(KeyActions::new("text".into()), |actions, value| {
-            actions
-                .then(KeyAction::Down { value })
-                .then(KeyAction::Up { value })
-        });
-    client.perform_actions(actions).await?;
+    let actual = client
+        .execute(
+            "return document.querySelector(arguments[0])?.value;",
+            vec![json!(selector)],
+        )
+        .await?;
+    if actual != json!(text) {
+        return Err(format!("Saisie synthétique incomplète dans {selector} : {actual}").into());
+    }
     Ok(())
 }
 
