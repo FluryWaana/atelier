@@ -290,6 +290,7 @@ async fn the_product_dbus_menu_opens_its_session_and_quits_the_owned_server() {
             .is_some()
     );
     assert!(DataLock::acquire(&data).is_err());
+    let token = session::read(&data).unwrap();
     let mut headers = reqwest::header::HeaderMap::new();
     headers.insert("authorization", format!("Bearer {token}").parse().unwrap());
     headers.insert("x-local-request", "1".parse().unwrap());
