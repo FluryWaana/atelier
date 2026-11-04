@@ -4,6 +4,21 @@ use std::{collections::BTreeMap, sync::OnceLock};
 #[derive(Clone, Copy)]
 pub struct I18n(RwSignal<&'static str>);
 
+pub async fn save_language(
+    token: &str,
+    language: atelier_core::contracts::InterfaceLanguage,
+    expected: Option<atelier_core::contracts::InterfaceLanguage>,
+) -> Result<(), String> {
+    crate::write(
+        token,
+        gloo_net::http::Method::PUT,
+        "/api/interface/language",
+        &serde_json::json!({"language":language,"expected":expected}),
+    )
+    .await?;
+    Ok(())
+}
+
 fn worktree_parts(message: &str) -> Option<(&str, &str)> {
     let (role, cause) = message.strip_prefix("Worktree ")?.split_once(" : ")?;
     matches!(role, "front" | "back").then_some((role, cause))

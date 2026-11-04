@@ -599,6 +599,12 @@ async fn diagnostics_scenario(client: &Client, http: &reqwest::Client) -> Result
     let port = free_port()?;
     let address = format!("http://127.0.0.1:{port}");
     let (_server, token) = start_server(&ui_server(), data.path(), port, &ui_assets()).await?;
+    client
+        .goto(&format!("{address}/synthetic-language-bootstrap"))
+        .await?;
+    client
+        .execute("localStorage.setItem('atelier-language', 'en-US');", vec![])
+        .await?;
     client.goto(&format!("{address}/#session={token}")).await?;
     wait_dom(
         client,
@@ -606,6 +612,32 @@ async fn diagnostics_scenario(client: &Client, http: &reqwest::Client) -> Result
         vec![],
     )
     .await?;
+    let initial: atelier_core::contracts::Board = http
+        .get(format!("{address}/api/state"))
+        .bearer_auth(&token)
+        .send()
+        .await?
+        .checked_status()
+        .await?
+        .json()
+        .await?;
+    if initial
+        .settings
+        .get::<atelier_core::contracts::InterfaceLanguage>("interfaceLanguage")?
+        != Some(atelier_core::contracts::InterfaceLanguage::English)
+    {
+        return Err("La préférence de langue du navigateur n’a pas été importée.".into());
+    }
+    http.put(format!("{address}/api/interface/language"))
+        .bearer_auth(&token)
+        .header("x-local-request", "1")
+        .json(&json!({"language":"fr-FR","expected":"en-US"}))
+        .send()
+        .await?
+        .checked_status()
+        .await?;
+    client.refresh().await?;
+    wait_dom(client, "return document.documentElement.lang === 'fr-FR' && document.querySelector('#prototype-board')?.getAttribute('aria-busy') === 'false';", vec![]).await?;
     profiles_scenario(client, http, &address, &token, data.path()).await?;
     let fixture = crate::target()
         .join("debug")
@@ -618,12 +650,19 @@ async fn diagnostics_scenario(client: &Client, http: &reqwest::Client) -> Result
         ("en-US", "2026-10-29T14:35:42", "10/29/2026"),
         ("fr-FR", "invalid-date", "Indisponible"),
     ] {
-        client
-            .execute(
-                "localStorage.setItem('atelier-language', arguments[0]);",
-                vec![json!(language)],
-            )
+        let board: atelier_core::contracts::Board = http
+            .get(format!("{address}/api/state"))
+            .bearer_auth(&token)
+            .send()
+            .await?
+            .checked_status()
+            .await?
+            .json()
             .await?;
+        http.put(format!("{address}/api/interface/language")).bearer_auth(&token)
+            .header("x-local-request", "1")
+            .json(&json!({"language":language,"expected":board.settings.get::<atelier_core::contracts::InterfaceLanguage>("interfaceLanguage")?}))
+            .send().await?.checked_status().await?;
         client.refresh().await?;
         wait_dom(client, "return document.documentElement.lang === arguments[0] && document.querySelector('#prototype-board')?.getAttribute('aria-busy') === 'false';", vec![json!(language)]).await?;
         // Override only the synthetic report date so locale checks do not depend on today's date.
@@ -4310,8 +4349,11 @@ async fn language_scenario(client: &Client) -> Result<()> {
     wait_dom(client,"return document.querySelector('.criterion .sr-only')?.textContent === 'Criterion 1' && document.querySelector('.criterion button')?.getAttribute('aria-label') === 'Remove criterion 1';",vec![]).await?;
     click(client, "#close-editor").await?;
     click(client, "#confirm-editor").await?;
+    client
+        .execute("localStorage.removeItem('atelier-language');", vec![])
+        .await?;
     client.refresh().await?;
-    wait_dom(client,"return document.documentElement.lang === 'en-US' && document.querySelector('#prototype-board')?.getAttribute('aria-busy') === 'false' && document.querySelector('#manage-settings')?.textContent === 'Settings';",vec![]).await?;
+    wait_dom(client,"return document.documentElement.lang === 'en-US' && document.querySelector('#prototype-board')?.getAttribute('aria-busy') === 'false' && document.querySelector('#manage-settings')?.textContent === 'Settings' && localStorage.getItem('atelier-language') === 'en-US';",vec![]).await?;
     std::fs::write(
         root().join(".artifacts/rust-ui-english.png"),
         client.screenshot().await?,

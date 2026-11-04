@@ -1,4 +1,5 @@
 use crate::Result;
+use atelier_core::contracts::InterfaceLanguage;
 use std::{
     ffi::OsString,
     path::{Path, PathBuf},
@@ -6,16 +7,29 @@ use std::{
     time::Duration,
 };
 use tokio::{
-    io::AsyncReadExt,
+    io::{AsyncReadExt, AsyncWriteExt},
     process::{Child, Command},
 };
 
 const READY: &[u8] = b"atelier-tray/1 ready\n";
 
-pub struct Owner(Child);
+pub struct Owner {
+    child: Child,
+    forward: tokio::task::JoinHandle<()>,
+}
+
+impl Drop for Owner {
+    fn drop(&mut self) {
+        self.forward.abort();
+    }
+}
 
 impl Owner {
-    pub async fn start(data: &Path, port: u16) -> Result<Option<Self>> {
+    pub async fn start(
+        data: &Path,
+        port: u16,
+        mut language: tokio::sync::watch::Receiver<InterfaceLanguage>,
+    ) -> Result<Option<Self>> {
         #[cfg(target_os = "linux")]
         if (std::env::var_os("DISPLAY").is_none() && std::env::var_os("WAYLAND_DISPLAY").is_none())
             || std::env::var_os("DBUS_SESSION_BUS_ADDRESS").is_none()
@@ -31,6 +45,7 @@ impl Owner {
             .arg(data)
             .arg(port.to_string())
             .arg(std::process::id().to_string())
+            .arg(language.borrow_and_update().code())
             .env_clear()
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -77,23 +92,38 @@ impl Owner {
                 "Icône système indisponible ; Atelier reste accessible dans le navigateur.".into(),
             );
         }
-        Ok(Some(Self(child)))
+        let mut input = child.stdin.take().ok_or("Entrée du tray absente.")?;
+        let forward = tokio::spawn(async move {
+            while language.changed().await.is_ok() {
+                let byte = match *language.borrow_and_update() {
+                    InterfaceLanguage::French => b'F',
+                    InterfaceLanguage::English => b'E',
+                };
+                if input.write_all(&[byte]).await.is_err() {
+                    break;
+                }
+            }
+        });
+        Ok(Some(Self { child, forward }))
     }
 
     pub async fn close(mut self) -> Result<()> {
-        drop(self.0.stdin.take());
-        match tokio::time::timeout(Duration::from_secs(5), self.0.wait()).await {
+        self.forward.abort();
+        let _ = (&mut self.forward).await;
+        match tokio::time::timeout(Duration::from_secs(5), self.child.wait()).await {
             Ok(Ok(status)) if status.success() => Ok(()),
             _ => {
-                let _ = self.0.kill().await;
-                let _ = self.0.wait().await;
+                let _ = self.child.kill().await;
+                let _ = self.child.wait().await;
                 Err("L’icône système n’a pas confirmé son retrait.".into())
             }
         }
     }
 }
 
-fn arguments(args: impl IntoIterator<Item = OsString>) -> Result<(PathBuf, u16, u32)> {
+fn arguments(
+    args: impl IntoIterator<Item = OsString>,
+) -> Result<(PathBuf, u16, u32, InterfaceLanguage)> {
     let mut args = args.into_iter();
     let data = args
         .next()
@@ -109,6 +139,14 @@ fn arguments(args: impl IntoIterator<Item = OsString>) -> Result<(PathBuf, u16, 
         .and_then(|value| value.to_str().and_then(|value| value.parse::<u32>().ok()))
         .filter(|pid| *pid != 0)
         .ok_or("Propriétaire du tray invalide.")?;
+    let language = args
+        .next()
+        .and_then(|value| {
+            value
+                .to_str()
+                .and_then(|value| InterfaceLanguage::try_from(value).ok())
+        })
+        .ok_or("Langue du tray invalide.")?;
     if !data.is_absolute()
         || data
             .to_str()
@@ -117,24 +155,59 @@ fn arguments(args: impl IntoIterator<Item = OsString>) -> Result<(PathBuf, u16, 
     {
         return Err("Arguments du tray invalides.".into());
     }
-    Ok((data, port, owner))
+    Ok((data, port, owner, language))
 }
 
 pub fn command(args: impl IntoIterator<Item = OsString>) -> Result<()> {
-    let (data, port, owner) = arguments(args)?;
+    let (data, port, owner, language) = arguments(args)?;
     #[cfg(target_os = "macos")]
-    return objc2::rc::autoreleasepool(|_| run(data, port, owner));
+    return objc2::rc::autoreleasepool(|_| run(data, port, owner, language));
     #[cfg(not(target_os = "macos"))]
-    run(data, port, owner)
+    run(data, port, owner, language)
 }
 
-fn run(data: PathBuf, port: u16, owner: u32) -> Result<()> {
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Phase {
+    Ready,
+    Working,
+    Refused,
+}
+
+fn labels(language: InterfaceLanguage, phase: Phase) -> [&'static str; 3] {
+    match language {
+        InterfaceLanguage::French => [
+            match phase {
+                Phase::Ready => "Prêt",
+                Phase::Working => "En cours",
+                Phase::Refused => "Action refusée. Consulte Atelier",
+            },
+            "Ouvrir Atelier",
+            "Quitter Atelier",
+        ],
+        InterfaceLanguage::English => [
+            match phase {
+                Phase::Ready => "Ready",
+                Phase::Working => "Working",
+                Phase::Refused => "Action refused. Check Atelier",
+            },
+            "Open Atelier",
+            "Quit Atelier",
+        ],
+    }
+}
+
+fn language_byte(byte: u8) -> Result<InterfaceLanguage> {
+    match byte {
+        b'F' => Ok(InterfaceLanguage::French),
+        b'E' => Ok(InterfaceLanguage::English),
+        _ => Err("Langue du tray invalide.".into()),
+    }
+}
+
+fn run(data: PathBuf, port: u16, owner: u32, mut language: InterfaceLanguage) -> Result<()> {
     use std::{
         io::{Read, Write},
-        sync::{
-            Arc,
-            atomic::{AtomicBool, Ordering},
-        },
+        sync::mpsc,
         thread,
     };
     use tray_icon::{
@@ -152,13 +225,15 @@ fn run(data: PathBuf, port: u16, owner: u32) -> Result<()> {
         app.finishLaunching();
         pump();
     }
-    let open = MenuItem::new("Ouvrir Atelier / Open Atelier", true, None);
-    let stop = MenuItem::new("Quitter Atelier / Quit Atelier", true, None);
-    let status = MenuItem::new("Prêt / Ready", false, None);
-    let menu = Menu::with_items(&[&open, &stop, &status])?;
+    let mut phase = Phase::Ready;
+    let initial = labels(language, phase);
+    let status = MenuItem::new(initial[0], false, None);
+    let open = MenuItem::new(initial[1], true, None);
+    let stop = MenuItem::new(initial[2], true, None);
+    let menu = Menu::with_items(&[&status, &open, &stop])?;
     let tray = TrayIconBuilder::new()
         .with_id(format!("atelier-rust-{}", std::process::id()))
-        .with_tooltip("Atelier Kanban")
+        .with_tooltip(format!("Atelier Kanban : {}", initial[0]))
         .with_icon(Icon::from_rgba(pixels(), 16, 16)?)
         .with_menu(Box::new(menu))
         .with_menu_on_left_click(true)
@@ -173,27 +248,38 @@ fn run(data: PathBuf, port: u16, owner: u32) -> Result<()> {
             pump();
         }
     }
-    let disconnected = Arc::new(AtomicBool::new(false));
-    let observer = disconnected.clone();
+    let (updates, receiver) = mpsc::sync_channel(1);
     thread::spawn(move || {
-        let _ = std::io::stdin().read(&mut [0u8; 1]);
-        observer.store(true, Ordering::Release);
+        let mut input = std::io::stdin().lock();
+        let mut byte = [0];
+        while input.read_exact(&mut byte).is_ok() {
+            if updates
+                .send(language_byte(byte[0]).map_err(|error| error.to_string()))
+                .is_err()
+            {
+                break;
+            }
+        }
     });
     std::io::stdout().write_all(READY)?;
     std::io::stdout().flush()?;
     let mut active = None::<thread::JoinHandle<std::result::Result<(), String>>>;
-    while !disconnected.load(Ordering::Acquire) {
+    let mut shown = (language, phase);
+    loop {
         pump();
+        match receiver.try_recv() {
+            Ok(update) => language = update?,
+            Err(mpsc::TryRecvError::Disconnected) => break,
+            Err(mpsc::TryRecvError::Empty) => {}
+        }
         if active.as_ref().is_some_and(|active| active.is_finished()) {
             let result = active.take().ok_or("Action du tray absente.")?.join();
-            let message = match result {
-                Ok(Ok(())) => "Prêt / Ready",
-                _ => "Action refusée. Consulte Atelier / Action refused. Check Atelier",
+            phase = match result {
+                Ok(Ok(())) => Phase::Ready,
+                _ => Phase::Refused,
             };
-            status.set_text(message);
             open.set_enabled(true);
             stop.set_enabled(true);
-            let _ = tray.set_tooltip(Some(format!("Atelier Kanban : {message}")));
         }
         while let Ok(event) = MenuEvent::receiver().try_recv() {
             if active.is_some() {
@@ -205,7 +291,7 @@ fn run(data: PathBuf, port: u16, owner: u32) -> Result<()> {
             }
             open.set_enabled(false);
             stop.set_enabled(false);
-            status.set_text("En cours / Working");
+            phase = Phase::Working;
             let data = data.clone();
             active = Some(thread::spawn(move || {
                 let runtime = tokio::runtime::Builder::new_current_thread()
@@ -222,6 +308,14 @@ fn run(data: PathBuf, port: u16, owner: u32) -> Result<()> {
                     })
                     .map_err(|error| error.to_string())
             }));
+        }
+        if shown != (language, phase) {
+            let text = labels(language, phase);
+            status.set_text(text[0]);
+            open.set_text(text[1]);
+            stop.set_text(text[2]);
+            let _ = tray.set_tooltip(Some(format!("Atelier Kanban : {}", text[0])));
+            shown = (language, phase);
         }
     }
     // The GUI process owns only its icon; disconnect never stops or restarts a server.
@@ -282,6 +376,43 @@ fn pump() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn every_menu_state_uses_one_language_with_status_first() {
+        for (language, expected) in [
+            (
+                InterfaceLanguage::French,
+                [
+                    "Prêt",
+                    "En cours",
+                    "Action refusée. Consulte Atelier",
+                    "Ouvrir Atelier",
+                    "Quitter Atelier",
+                ],
+            ),
+            (
+                InterfaceLanguage::English,
+                [
+                    "Ready",
+                    "Working",
+                    "Action refused. Check Atelier",
+                    "Open Atelier",
+                    "Quit Atelier",
+                ],
+            ),
+        ] {
+            for (phase, status) in [Phase::Ready, Phase::Working, Phase::Refused]
+                .into_iter()
+                .zip(&expected[..3])
+            {
+                assert_eq!(labels(language, phase), [*status, expected[3], expected[4]]);
+            }
+        }
+        assert_eq!(language_byte(b'F').unwrap(), InterfaceLanguage::French);
+        assert_eq!(language_byte(b'E').unwrap(), InterfaceLanguage::English);
+        assert!(language_byte(0).is_err());
+        assert!(language_byte(b'X').is_err());
+    }
     #[test]
     fn helper_validates_scope_without_opening_any_data_or_desktop() {
         let directory = tempfile::tempdir().unwrap();
@@ -289,8 +420,15 @@ mod tests {
             directory.path().as_os_str().to_owned(),
             "4317".into(),
             "42".into(),
+            "fr-FR".into(),
         ];
         assert!(arguments(valid.clone()).is_ok());
+        let mut english = valid.clone();
+        english[3] = "en-US".into();
+        assert_eq!(arguments(english).unwrap().3, InterfaceLanguage::English);
+        let mut unsupported = valid.clone();
+        unsupported[3] = "unsupported".into();
+        assert!(arguments(unsupported).is_err());
         for args in [
             vec![],
             vec!["relative".into(), "4317".into()],

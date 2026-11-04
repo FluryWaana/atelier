@@ -24,6 +24,23 @@ pub fn platform() -> &'static str {
     }
 }
 
+pub fn update_language(
+    store: &Store<'_>,
+    language: atelier_core::contracts::InterfaceLanguage,
+    expected: Option<atelier_core::contracts::InterfaceLanguage>,
+) -> Result<()> {
+    store.transaction(|store| {
+        let mut settings = store.settings::<Document>()?;
+        if settings.get::<atelier_core::contracts::InterfaceLanguage>("interfaceLanguage")?
+            != expected
+        {
+            return Err(settings::SettingsFailure::Conflict.into());
+        }
+        settings.set("interfaceLanguage", &language)?;
+        store.save_settings(&settings)
+    })
+}
+
 pub fn jira_base(value: &str) -> Result<String> {
     let url = reqwest::Url::parse(value).map_err(|_| "Invalid URL")?;
     if url.scheme() != "https"
@@ -160,6 +177,31 @@ pub fn remove_token(
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn language_updates_preserve_credentials_and_reject_stale_choices() {
+        use atelier_core::contracts::InterfaceLanguage::{English, French};
+        let connection = super::super::store::open(std::path::Path::new(":memory:")).unwrap();
+        let store = Store::new(&connection);
+        let saved = json!({"agent":"synthetic", "taskTemplates":[{"id":"keep"}]});
+        store.save_settings(&saved).unwrap();
+        token_vault::save_encrypted(&store, Some("synthetic-locked-vault")).unwrap();
+        update_language(&store, English, None).unwrap();
+        assert!(update_language(&store, French, None).is_err());
+        assert!(update_language(&store, French, Some(French)).is_err());
+        let mut expected = saved.clone();
+        expected["interfaceLanguage"] = json!("en-US");
+        assert_eq!(store.settings::<serde_json::Value>().unwrap(), expected);
+        update_language(&store, French, Some(English)).unwrap();
+        assert_eq!(
+            token_vault::read_encrypted(&store).unwrap().as_deref(),
+            Some("synthetic-locked-vault")
+        );
+        connection.execute_batch("CREATE TRIGGER refuse_language BEFORE UPDATE ON settings BEGIN SELECT RAISE(ABORT, 'synthetic failure'); END;").unwrap();
+        assert!(update_language(&store, English, Some(French)).is_err());
+        expected["interfaceLanguage"] = json!("fr-FR");
+        assert_eq!(store.settings::<serde_json::Value>().unwrap(), expected);
+    }
 
     #[test]
     fn unavailable_vault_keeps_local_settings_readable_without_claiming_tokens_are_absent() {

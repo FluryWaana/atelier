@@ -37,6 +37,106 @@ async fn start(
 }
 
 #[tokio::test]
+async fn interface_language_is_validated_shared_and_preserved_after_restart() {
+    let data = tempfile::tempdir().unwrap();
+    let assets = tempfile::tempdir().unwrap();
+    std::fs::write(assets.path().join("index.html"), "synthetic").unwrap();
+    let (address, token, server) = start(data.path(), assets.path()).await;
+    let client = reqwest::Client::new();
+    let edit = |body: Value| {
+        client
+            .put(format!("{address}/api/interface/language"))
+            .bearer_auth(&token)
+            .header("x-local-request", "1")
+            .json(&body)
+            .send()
+    };
+    let old_backup: Value = client
+        .post(format!("{address}/api/backups"))
+        .bearer_auth(&token)
+        .header("x-local-request", "1")
+        .json(&json!({}))
+        .send()
+        .await
+        .unwrap()
+        .error_for_status()
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(
+        client
+            .put(format!("{address}/api/interface/language"))
+            .json(&json!({"language":"en-US"}))
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        401
+    );
+    for body in [
+        json!({"language":"unsupported"}),
+        json!({"language":false}),
+        json!({"language":"en-US","extra":true}),
+    ] {
+        assert_eq!(edit(body).await.unwrap().status(), 400);
+    }
+    let (first, second) = tokio::join!(
+        edit(json!({"language":"en-US","expected":null})),
+        edit(json!({"language":"fr-FR","expected":null})),
+    );
+    let mut statuses = [
+        first.unwrap().status().as_u16(),
+        second.unwrap().status().as_u16(),
+    ];
+    statuses.sort();
+    assert_eq!(statuses, [200, 409]);
+    let board: Value = client
+        .get(format!("{address}/api/state"))
+        .bearer_auth(&token)
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    let saved = board["settings"]["interfaceLanguage"].clone();
+    assert!(saved == "fr-FR" || saved == "en-US");
+    assert!(
+        edit(json!({"language":"en-US","expected":saved}))
+            .await
+            .unwrap()
+            .status()
+            .is_success()
+    );
+    assert!(
+        client
+            .post(format!("{address}/api/backups/restore"))
+            .bearer_auth(&token)
+            .header("x-local-request", "1")
+            .json(&json!({"name":old_backup["name"],"confirmed":true}))
+            .send()
+            .await
+            .unwrap()
+            .status()
+            .is_success()
+    );
+    stop(&address, &token, server).await;
+    let (address, token, server) = start(data.path(), assets.path()).await;
+    let board: Value = client
+        .get(format!("{address}/api/state"))
+        .bearer_auth(&token)
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(board["settings"]["interfaceLanguage"], "en-US");
+    stop(&address, &token, server).await;
+}
+
+#[tokio::test]
 async fn brainstorms_remain_in_their_own_collection_after_restart() {
     let data = tempfile::tempdir().unwrap();
     let assets = tempfile::tempdir().unwrap();

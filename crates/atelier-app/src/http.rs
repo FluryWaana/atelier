@@ -86,6 +86,7 @@ struct AppState {
     event_token: String,
     port: u16,
     shutdown: watch::Sender<bool>,
+    interface_language: watch::Sender<atelier_core::contracts::InterfaceLanguage>,
     clone_cancellation: watch::Sender<String>,
     changed: tokio::sync::broadcast::Sender<()>,
     file_reads: tokio::sync::Semaphore,
@@ -332,6 +333,14 @@ async fn serve_mode(
         .call(|store| store.transaction(atelier_core::application::time_tracking::initialize))
         .await?;
     let (shutdown, mut stopped) = watch::channel(false);
+    let language = database
+        .call(|store| {
+            Ok(store
+                .settings::<Document>()?
+                .get::<atelier_core::contracts::InterfaceLanguage>("interfaceLanguage")?
+                .unwrap_or_default())
+        })
+        .await?;
     let changed = tokio::sync::broadcast::channel(16).0;
     let state = Arc::new(AppState {
         native: desktop,
@@ -345,6 +354,7 @@ async fn serve_mode(
         event_token: session::new_token()?,
         port: listener.local_addr()?.port(),
         shutdown,
+        interface_language: watch::channel(language).0,
         clone_cancellation: watch::channel(String::new()).0,
         services: crate::infrastructure::dev_servers::DevServers::new(changed.clone()),
         runs: crate::infrastructure::command_runs::CommandRuns::new(changed.clone()),
@@ -362,7 +372,12 @@ async fn serve_mode(
     let tray = if !desktop {
         None
     } else {
-        match crate::infrastructure::tray::Owner::start(&state.prototype_paths[0], state.port).await
+        match crate::infrastructure::tray::Owner::start(
+            &state.prototype_paths[0],
+            state.port,
+            state.interface_language.subscribe(),
+        )
+        .await
         {
             Ok(tray) => tray,
             Err(_) => {

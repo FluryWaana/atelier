@@ -1,6 +1,36 @@
 use crate::document::Document;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
+#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+pub enum InterfaceLanguage {
+    #[default]
+    #[serde(rename = "fr-FR")]
+    French,
+    #[serde(rename = "en-US")]
+    English,
+}
+
+impl InterfaceLanguage {
+    pub fn code(self) -> &'static str {
+        match self {
+            Self::French => "fr-FR",
+            Self::English => "en-US",
+        }
+    }
+}
+
+impl TryFrom<&str> for InterfaceLanguage {
+    type Error = &'static str;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "fr-FR" => Ok(Self::French),
+            "en-US" => Ok(Self::English),
+            _ => Err("message.invalid_request_parameters"),
+        }
+    }
+}
+
 #[derive(Clone, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct TempoConfiguration {

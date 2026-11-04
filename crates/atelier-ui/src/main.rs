@@ -398,6 +398,20 @@ fn App() -> impl IntoView {
     let i18n = I18n::default();
     provide_context(i18n);
     let board = BoardState::default();
+    Effect::new(move |_| {
+        if let Some(language) = board.settings.with(|settings| {
+            settings
+                .get::<atelier_core::contracts::InterfaceLanguage>("interfaceLanguage")
+                .ok()
+                .flatten()
+        }) {
+            untrack(move || {
+                if i18n.code() != language.code() {
+                    let _ = i18n.select(language.code());
+                }
+            });
+        }
+    });
     let navigation_guard = NavigationGuard(RwSignal::new(None), RwSignal::new(0));
     provide_context(navigation_guard);
     let view = RwSignal::new(if requested_task().is_some() {
@@ -500,7 +514,20 @@ fn App() -> impl IntoView {
             spawn_local(async move {
                 match load(&token).await {
                     Ok(value) => {
+                        let migrate_language = value.settings.raw("interfaceLanguage").is_none();
                         board.apply(value);
+                        if migrate_language {
+                            let language =
+                                atelier_core::contracts::InterfaceLanguage::try_from(i18n.code())
+                                    .unwrap_or_default();
+                            if let Err(message) = i18n::save_language(&token, language, None).await
+                                && message
+                                    != "message.these_settings_changed_elsewhere_your_draft_is_preserved_close_a"
+                            {
+                                error.set(message);
+                            }
+                            let _ = board.refresh(&token).await;
+                        }
                         let agent_token = token.clone();
                         spawn_local(async move {
                             match agent_profiles::discover_profiles(&agent_token, board).await {

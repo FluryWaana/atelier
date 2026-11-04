@@ -407,6 +407,11 @@ pub(super) fn router(app: Router<Shared>) -> Router<Shared> {
             axum::routing::put(settings::update),
         )
         .api_route(
+            "/api/interface/language",
+            Policy::Ordinary,
+            axum::routing::put(settings::language),
+        )
+        .api_route(
             "/api/integrations/defaults",
             Policy::Ordinary,
             axum::routing::put(integrations::choose),

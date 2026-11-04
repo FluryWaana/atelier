@@ -26,6 +26,7 @@ async fn the_product_tray_removes_itself_on_owner_disconnect_without_opening_dat
         .arg(&data)
         .arg(port.to_string())
         .arg(std::process::id().to_string())
+        .arg("fr-FR")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -255,7 +256,7 @@ async fn the_product_dbus_menu_opens_its_session_and_quits_the_owned_server() {
         );
         id
     };
-    let open = find("Ouvrir Atelier / Open Atelier").await;
+    let open = find("Ouvrir Atelier").await;
     assert!(!data.join("local-browser.html").exists());
     let _: () = menu
         .call("Event", &(open, "clicked", Variant::from(0i32), 0u32))
@@ -273,9 +274,7 @@ async fn the_product_dbus_menu_opens_its_session_and_quits_the_owned_server() {
             "Native Open action failed; owned browser session prepared: {}",
             data.join("local-browser.html").is_file()
         );
-        if data.join("local-browser.html").is_file()
-            && labels.iter().any(|text| text == "Prêt / Ready")
-        {
+        if data.join("local-browser.html").is_file() && labels.iter().any(|text| text == "Prêt") {
             break;
         }
         assert!(
@@ -291,7 +290,43 @@ async fn the_product_dbus_menu_opens_its_session_and_quits_the_owned_server() {
             .is_some()
     );
     assert!(DataLock::acquire(&data).is_err());
-    let quit = find("Quitter Atelier / Quit Atelier").await;
+    let mut headers = reqwest::header::HeaderMap::new();
+    headers.insert("authorization", format!("Bearer {token}").parse().unwrap());
+    headers.insert("x-local-request", "1".parse().unwrap());
+    headers.insert("content-type", "application/json".parse().unwrap());
+    assert!(
+        http.request(
+            &format!("{address}/api/interface/language"),
+            reqwest::Method::PUT,
+            headers,
+            Some(r#"{"language":"en-US","expected":null}"#),
+            Duration::from_secs(5),
+        )
+        .await
+        .unwrap()
+        .status
+        .is_success()
+    );
+    let deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        let texts: Vec<_> = properties()
+            .await
+            .iter()
+            .map(|(_, props)| label(props))
+            .collect();
+        if ["Ready", "Open Atelier", "Quit Atelier"]
+            .iter()
+            .all(|text| texts.iter().any(|item| item == text))
+        {
+            break;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "The native tray did not apply the selected language"
+        );
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+    let quit = find("Quit Atelier").await;
     let _: () = menu
         .call("Event", &(quit, "clicked", Variant::from(0i32), 0u32))
         .await

@@ -26,7 +26,7 @@ trap {
   exit 1
 }
 # ASCII source keeps the Windows PowerShell 5.1 helper independent of the runner code page.
-$readyName = 'Atelier Kanban : Pr' + [char]0x00ea + 't / Ready'
+$readyName = 'Atelier Kanban : Pr' + [char]0x00ea + 't'
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
 function Format-TrayControlContext($Current) {
@@ -47,7 +47,7 @@ function Get-TrayControlContext([int]$ExplorerId) {
   $records | Sort-Object @{ Expression = { $_.Name -like 'Atelier*' }; Descending = $true } | Select-Object -First 128
 }
 function New-TrayControlCondition([string]$Name, [System.Windows.Automation.ControlType]$Type, [string]$AlternativeName) {
-  $atelierNames = @('Atelier Kanban', ('Atelier Kanban : Pr' + [char]0x00ea + 't / Ready'))
+  $atelierNames = @('Atelier Kanban', ('Atelier Kanban : Pr' + [char]0x00ea + 't'))
   [System.Windows.Automation.Condition[]]$names = @(foreach ($label in @($Name, $AlternativeName)) {
     if (-not $label) { continue }
     [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::NameProperty, $label, [System.Windows.Automation.PropertyConditionFlags]::IgnoreCase)
@@ -103,9 +103,9 @@ function Wait-TrayButton([string]$Name) {
 }
 function Confirm-TrayQuit([string]$LockFile, [int]$Port) {
   # This guarded disposable runner has one installed Atelier instance; ambiguity refuses any click.
-  $button = Wait-TrayButton 'Atelier Kanban'
+  $button = Wait-TrayButton $readyName
   Invoke-TrayControl $button
-  $open = Wait-TrayControl 'Ouvrir Atelier / Open Atelier' ([System.Windows.Automation.ControlType]::MenuItem)
+  $open = Wait-TrayControl 'Ouvrir Atelier' ([System.Windows.Automation.ControlType]::MenuItem)
   Invoke-TrayControl $open
   # Windows opens the authenticated URL directly; only Unix creates local-browser.html.
   $openedConnection = [Net.Sockets.TcpClient]::new()
@@ -114,7 +114,7 @@ function Confirm-TrayQuit([string]$LockFile, [int]$Port) {
   } finally { $openedConnection.Dispose() }
   $button = Wait-TrayButton $readyName
   Invoke-TrayControl $button
-  $quit = Wait-TrayControl 'Quitter Atelier / Quit Atelier' ([System.Windows.Automation.ControlType]::MenuItem)
+  $quit = Wait-TrayControl 'Quitter Atelier' ([System.Windows.Automation.ControlType]::MenuItem)
   Invoke-TrayControl $quit
   $deadline = [DateTime]::UtcNow.AddSeconds(30)
   $closed = $false

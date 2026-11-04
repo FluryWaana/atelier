@@ -29,14 +29,14 @@ function Assert-TrayCondition($Name, $Type, $AlternativeName, [string[]]$Expecte
 }
 $buttonType = [System.Windows.Automation.ControlType]::Button
 $menuType = [System.Windows.Automation.ControlType]::MenuItem
-$ready = 'Atelier Kanban : Pr' + [char]0x00ea + 't / Ready'
-$compositeReady = 'Atelier Kanban Atelier Kanban : Pr' + [char]0x00ea + 't / Ready'
+$ready = 'Atelier Kanban : Pr' + [char]0x00ea + 't'
+$compositeReady = 'Atelier Kanban Atelier Kanban : Pr' + [char]0x00ea + 't'
 $rejectedReady = @(($ready + ' other'), ($compositeReady + ' other'), ('Other ' + $ready), ('Atelier Kanban ' + $compositeReady))
 Assert-TrayCondition $ready $buttonType '' @($ready, $compositeReady) $rejectedReady
 Assert-TrayCondition 'Atelier Kanban' $buttonType '' @('Atelier Kanban', 'Atelier Kanban Atelier Kanban') @($ready, 'Atelier Kanban other')
 Assert-TrayCondition 'Atelier Kanban' $buttonType $ready @('Atelier Kanban', 'Atelier Kanban Atelier Kanban', $ready, $compositeReady) $rejectedReady
 Assert-TrayCondition 'Show hidden icons' $buttonType '' @('Show Hidden Icons') @('Show Hidden Icons Hide', 'Show Hidden Icons other', 'Atelier Kanban Show hidden icons')
-Assert-TrayCondition 'Ouvrir Atelier / Open Atelier' $menuType '' @('Ouvrir Atelier / Open Atelier') @('Atelier Kanban Ouvrir Atelier / Open Atelier')
+Assert-TrayCondition 'Ouvrir Atelier' $menuType '' @('Ouvrir Atelier') @('Atelier Kanban Ouvrir Atelier')
 Assert-TrayCondition $ready $menuType '' @($ready) @($compositeReady)
 Assert-TrayCondition 'Atelier Kanban other' $buttonType '' @('Atelier Kanban other') @('Atelier Kanban Atelier Kanban other')
 $wait = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Wait-TrayButton' }, $true)
@@ -120,7 +120,7 @@ foreach ($scenario in @('owned', 'unavailable', 'ui-unavailable', 'long')) {
   function Find-OwnedTrayControl { return $null }
   function Invoke-TrayControl {
     param($Control)
-    if ($Control -eq 'Quitter Atelier / Quit Atelier') { $listener.Stop() }
+    if ($Control -eq 'Quitter Atelier') { $listener.Stop() }
   }
   $listener = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, 0)
   $listener.Start()

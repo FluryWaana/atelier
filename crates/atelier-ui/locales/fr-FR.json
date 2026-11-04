@@ -610,7 +610,7 @@
   "message.agent_instructions": "Instructions pour l’agent",
   "message.duration_must_be_between_1_second_and_24_hours": "La durée doit être comprise entre 1 seconde et 24 heures.",
   "message.the_language_changed_for_this_window_but_cannot_be_saved_in_this": "La langue change pour cette fenêtre, mais ne peut pas être enregistrée dans ce navigateur.",
-  "message.the_language_is_saved_in_this_browser": "La langue est conservée dans ce navigateur.",
+  "message.the_language_is_saved_for_this_workspace": "La langue est conservée pour cet espace de travail et son icône système.",
   "message.language": "Langue",
   "message.requirements_or_criteria_changed_run_the_review_again": "Le besoin ou les critères ont changé. Relancez la review.",
   "message.the_repository_must_be_a_folder": "Le dépôt doit être un dossier.",

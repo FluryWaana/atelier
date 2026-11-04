@@ -47,6 +47,7 @@ pub fn Settings(
         }
     });
     let pending = RwSignal::new(false);
+    let language_pending = RwSignal::new(false);
     let tab = RwSignal::new(
         TABS.iter()
             .position(|(id, _)| *id == initial_tab)
@@ -287,11 +288,40 @@ pub fn Settings(
                                 <crate::form::Select
                                     {..}
                                     id="interface-language"
+                                    disabled={move || language_pending.get()}
                                     prop:value={move || i18n.code()}
                                     on:change={move |event| {
-                                        if let Err(message) = i18n.select(&event_target_value(&event)) {
-                                            error.set(message.into());
-                                        }
+                                        if language_pending.get_untracked() { return; }
+                                        let language = match atelier_core::contracts::InterfaceLanguage::try_from(event_target_value(&event).as_str()) {
+                                            Ok(language) => language,
+                                            Err(message) => {
+                                                error.set(message.into());
+                                                let _ = i18n.select(i18n.code());
+                                                return;
+                                            }
+                                        };
+                                        let credential = match token.get_value() {
+                                            Ok(credential) => credential,
+                                            Err(message) => {
+                                                error.set(message);
+                                                let _ = i18n.select(i18n.code());
+                                                return;
+                                            }
+                                        };
+                                        let expected = board.settings.with_untracked(|settings| settings.get("interfaceLanguage").ok().flatten());
+                                        language_pending.set(true);
+                                        error.set(String::new());
+                                        spawn_local(async move {
+                                            match crate::i18n::save_language(&credential, language, expected).await {
+                                                Ok(()) => { let _ = i18n.select(language.code()); }
+                                                Err(message) => {
+                                                    let _ = error.try_set(message);
+                                                    let _ = i18n.select(i18n.code());
+                                                }
+                                            }
+                                            let _ = board.refresh(&credential).await;
+                                            let _ = language_pending.try_set(false);
+                                        });
                                     }}
                                 >
                                     <option value="fr-FR">"Français (France)"</option>
@@ -299,7 +329,7 @@ pub fn Settings(
                                 </crate::form::Select>
                             </crate::form::Field>
                             <p class="hint">
-                                {move || i18n.text("message.the_language_is_saved_in_this_browser")}
+                                {move || i18n.text("message.the_language_is_saved_for_this_workspace")}
                             </p>
                         </section>
                         <crate::form::Form busy=Signal::derive(move||pending.get()) on_submit=Callback::new(move |event: leptos::ev::SubmitEvent| {

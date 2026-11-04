@@ -45,6 +45,7 @@ async fn mutate(state: Shared, request: Request, restore: bool) -> Response {
         Err((status, message)) => return failure(status, message),
     };
     let directory = state.backups.clone();
+    let language_updates = state.interface_language.clone();
     response(
         state
             .database
@@ -82,11 +83,24 @@ async fn mutate(state: Shared, request: Request, restore: bool) -> Response {
                     return Ok(serde_json::to_value(directory.create(store)?)?);
                 }
                 let name = backups::restore_name(&body)?;
+                let mut restored_language =
+                    store
+                        .settings::<Document>()?
+                        .get::<atelier_core::contracts::InterfaceLanguage>("interfaceLanguage")?;
                 let restored = directory.restore_with(store, &name, |store| {
                     let mut settings: Document = store.settings()?;
+                    restored_language = settings
+                        .get::<atelier_core::contracts::InterfaceLanguage>("interfaceLanguage")?
+                        .or(restored_language);
+                    if let Some(language) = restored_language {
+                        settings.set("interfaceLanguage", &language)?;
+                    }
                     backups::pause_restored_queue(&mut settings)?;
                     store.save_settings(&settings)
                 })?;
+                if let Some(language) = restored_language {
+                    language_updates.send_replace(language);
+                }
                 // Tokens are read from SQLite per request; there is no in-memory credential cache to clear.
                 Ok(serde_json::to_value(restored)?)
             })

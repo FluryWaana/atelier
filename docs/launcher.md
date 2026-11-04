@@ -20,6 +20,8 @@ Startup waits up to 20 seconds. A failed start stops only the child created by t
 
 The browser opens through native platform facilities. Session tokens are not printed or passed in browser command arguments. A browser launch error leaves the server available.
 
+The system tray menu uses the interface language selected in Settings. This preference is shared by the workspace and survives restarts. Existing browser preferences are imported when the workspace has no saved language. Restoring an older backup without a language preference keeps the current choice. The disabled status appears first, followed by Open and Quit. All status messages and the tooltip use the selected language, including during an action.
+
 ## Data locations
 
 An installed launcher uses the UI assets from its active version directory. A standalone binary uses the adjacent `ui` directory unless `--assets` is provided. Portable installations keep data in their `data` subdirectory. Installed workspaces use these locations:

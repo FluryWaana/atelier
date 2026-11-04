@@ -610,7 +610,7 @@
   "message.agent_instructions": "Agent instructions",
   "message.duration_must_be_between_1_second_and_24_hours": "Duration must be between 1 second and 24 hours.",
   "message.the_language_changed_for_this_window_but_cannot_be_saved_in_this": "The language changed for this window, but cannot be saved in this browser.",
-  "message.the_language_is_saved_in_this_browser": "The language is saved in this browser.",
+  "message.the_language_is_saved_for_this_workspace": "The language is saved for this workspace and its system tray icon.",
   "message.language": "Language",
   "message.requirements_or_criteria_changed_run_the_review_again": "Requirements or criteria changed. Run the review again.",
   "message.the_repository_must_be_a_folder": "The repository must be a folder.",
