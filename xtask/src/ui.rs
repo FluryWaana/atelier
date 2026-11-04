@@ -596,8 +596,9 @@ async fn diagnostics_scenario(client: &Client, http: &reqwest::Client) -> Result
     let port = free_port()?;
     let address = format!("http://127.0.0.1:{port}");
     let (_server, token) = start_server(&ui_server(), data.path(), port, &ui_assets()).await?;
+    // Seed storage on HTML rather than Firefox's privileged JSON error viewer.
     client
-        .goto(&format!("{address}/synthetic-language-bootstrap"))
+        .goto(&format!("{address}/?synthetic-language-bootstrap"))
         .await?;
     client
         .execute("localStorage.setItem('atelier-language', 'en-US');", vec![])
@@ -5105,7 +5106,13 @@ async fn clear_input(client: &Client, selector: &str) -> Result<()> {
 
 async fn type_text(client: &Client, selector: &str, text: &str) -> Result<()> {
     use fantoccini::actions::{InputSource, KeyAction, KeyActions};
-    editable(client, selector).await?.click().await?;
+    let element = editable(client, selector).await?;
+    if std::env::var("ATELIER_TEST_BROWSER").as_deref() == Ok("safari") {
+        // Safari key actions can lose letters after accented characters.
+        element.send_keys(text).await?;
+        return Ok(());
+    }
+    element.click().await?;
     // Native keyboard actions also support characters outside ChromeDriver send_keys' BMP limit.
     let actions = text
         .chars()

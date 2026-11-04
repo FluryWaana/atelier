@@ -23,6 +23,7 @@ pub fn RepositoryAccess(
     let path = Memo::new(move |_| path.get());
     let registry = RwSignal::new(None::<Registry>);
     let remove_ack = RwSignal::new(String::new());
+    let revoke_button = NodeRef::<leptos::html::Button>::new();
     let loading = RwSignal::new(false);
     let error = RwSignal::new(String::new());
     let alive = Rc::new(Cell::new(true));
@@ -240,9 +241,14 @@ pub fn RepositoryAccess(
                 disabled={Signal::derive(move || pending.get() || loading.get())}
                 class="request-revoke-repository"
                 {..}
+                node_ref={revoke_button}
                 type="button"
                 hidden={move || !authorized.get()}
                 on:click={move |_| {
+                    // Safari does not focus clicked buttons, so establish the dialog's return target.
+                    if let Some(button) = revoke_button.get_untracked() {
+                        let _ = button.focus();
+                    }
                     error.set(String::new());
                     remove_ack.set(path.get_untracked());
                 }}
