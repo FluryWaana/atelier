@@ -135,10 +135,19 @@ jobs:
         with:
           path: ${{ runner.temp }}/atelier-tools
           key: wasm-tools-${{ runner.os }}-${{ runner.arch }}-rust1.99.1-trunk0.22.1-bindgen0.2.130-binaryen133
-      - run: cargo install --locked trunk --version 0.22.1 --root "${{ runner.temp }}/atelier-tools"
+      - name: Install pinned official WASM tools without compiling them
         if: steps.wasm-tools.outputs.cache-hit != 'true'
-      - run: cargo install --locked wasm-bindgen-cli --version 0.2.130 --root "${{ runner.temp }}/atelier-tools"
-        if: steps.wasm-tools.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p "${{ runner.temp }}/atelier-tools/bin"
+          curl --fail --location --output "${{ runner.temp }}/trunk.tar.gz" https://github.com/trunk-rs/trunk/releases/download/v0.22.1/trunk-x86_64-unknown-linux-gnu.tar.gz
+          echo "2ab8d548fd5ed9cda50906f61fd8654204e7893bd52ebbfd90533862b7d71ee1  ${{ runner.temp }}/trunk.tar.gz" | sha256sum --check
+          tar -xzf "${{ runner.temp }}/trunk.tar.gz" -C "${{ runner.temp }}/atelier-tools/bin" trunk
+          curl --fail --location --output "${{ runner.temp }}/wasm-bindgen.tar.gz" https://github.com/wasm-bindgen/wasm-bindgen/releases/download/0.2.130/wasm-bindgen-0.2.130-x86_64-unknown-linux-musl.tar.gz
+          echo "9687f3bb551b9f66f37ed32a40d7913a00f7962db653054e56857bc306c3227f  ${{ runner.temp }}/wasm-bindgen.tar.gz" | sha256sum --check
+          tar -xzf "${{ runner.temp }}/wasm-bindgen.tar.gz" --strip-components=1 -C "${{ runner.temp }}/atelier-tools/bin" \
+            wasm-bindgen-0.2.130-x86_64-unknown-linux-musl/wasm-bindgen \
+            wasm-bindgen-0.2.130-x86_64-unknown-linux-musl/wasm-bindgen-test-runner \
+            wasm-bindgen-0.2.130-x86_64-unknown-linux-musl/wasm2es6js
       - name: Install pinned Binaryen for offline UI builds
         if: steps.wasm-tools.outputs.cache-hit != 'true'
         run: |

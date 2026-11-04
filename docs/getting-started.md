@@ -43,6 +43,8 @@ cargo install --locked wasm-bindgen-cli --version 0.2.130
 
 For release UI builds, download [Binaryen 133](https://github.com/WebAssembly/binaryen/releases/tag/version_133) for your platform and add its `bin` directory to PATH. `wasm-opt --version` must print `wasm-opt version 133 (version_133)`. Install this tool before the offline build. Development UI builds with `cargo xtask build-ui --dev` do not require it.
 
+The Linux UI job in CI installs Trunk and wasm-bindgen from official release archives and verifies their pinned SHA-256 hashes before extraction.
+
 Run these commands from the repository root:
 
 ```sh
