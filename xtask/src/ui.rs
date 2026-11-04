@@ -866,11 +866,7 @@ async fn scenario(client: &Client, http: &reqwest::Client, projects_only: bool) 
     wait_dom(client, "return location.pathname === '/overview';", vec![]).await?;
     new_task(client).await?;
     let title = "Tâche synthétique é 🔧 <script>";
-    client
-        .find(Locator::Css("#task-title"))
-        .await?
-        .send_keys(title)
-        .await?;
+    type_text(client, "#task-title", title).await?;
     click(client, "#create-task").await?;
     created_task(client, title).await?;
     wait_dom(client, "return document.querySelectorAll('#prototype-board .column').length === 5 && document.querySelectorAll('article.card').length === 2 && document.querySelector('[data-status=review] article.card')?.dataset.id === arguments[0] && !document.querySelector('.card-title script');", vec![queued["id"].clone()]).await?;
@@ -963,11 +959,7 @@ async fn scenario(client: &Client, http: &reqwest::Client, projects_only: bool) 
     click(client, "[data-status=todo] .card-open").await?;
     let title = "Tâche modifiée é 🔧 <script>";
     clear_input(client, "#edit-title").await?;
-    client
-        .find(Locator::Css("#edit-title"))
-        .await?
-        .send_keys(title)
-        .await?;
+    type_text(client, "#edit-title", title).await?;
     client
         .find(Locator::Css("#edit-description"))
         .await?
@@ -1025,11 +1017,7 @@ async fn scenario(client: &Client, http: &reqwest::Client, projects_only: bool) 
         return Err("Un titre vide doit rester invalide dans un panneau masqué.".into());
     }
     wait_dom(client,"return document.querySelector('#task-tab-details')?.getAttribute('aria-selected')==='true' && document.querySelector('#task-panel-details')?.hidden===false && document.activeElement?.id==='edit-title' && document.querySelector('#edit-description')?.value==='Description enregistrée';",vec![]).await?;
-    client
-        .find(Locator::Css("#edit-title"))
-        .await?
-        .send_keys(title)
-        .await?;
+    type_text(client, "#edit-title", title).await?;
     click(
         client,
         &format!(
@@ -2098,14 +2086,28 @@ async fn brainstorm_scenario(
         .join("debug")
         .join(format!("native-fixture{}", std::env::consts::EXE_SUFFIX));
     http.post(format!("{address}/api/agent-providers")).bearer_auth(token).header("x-local-request","1").json(&json!({"id":"preparation-command","name":"Synthetic preparation command","type":"command","auth":"cli","command":fixture,"analyzeArgs":["run-command","preparation"],"editArgs":["run-command","preparation"],"expected":null})).send().await?.checked_status().await?;
-    http.post(format!("{address}/api/cards/{}/worktree", converted[0].id))
-        .bearer_auth(token)
-        .header("x-local-request", "1")
-        .json(&json!({"branch":"atelier/synthetic-preparation","base":"main","fetchOrigin":false}))
-        .send()
-        .await?
-        .checked_status()
-        .await?;
+    let path = format!("/api/cards/{}/worktree", converted[0].id);
+    let refusal = format!(
+        "Requête synthétique {path} refusée (409 Conflict) : message.a_change_is_in_progress_try_again_shortly"
+    );
+    let deadline = Instant::now() + Duration::from_secs(60);
+    loop {
+        let response = http.post(format!("{address}{path}"))
+            .bearer_auth(token)
+            .header("x-local-request", "1")
+            .json(&json!({"branch":"atelier/synthetic-preparation","base":"main","fetchOrigin":false}))
+            .send().await?.checked_status().await;
+        match response {
+            // This admission refusal happens before any effect, as in the UI's write retry policy.
+            Err(error) if error.to_string() == refusal && Instant::now() < deadline => {
+                tokio::time::sleep(Duration::from_millis(200)).await;
+            }
+            result => {
+                result?;
+                break;
+            }
+        }
+    }
     client
         .goto(&format!("{address}/tasks/{}", converted[0].id))
         .await?;
@@ -2802,11 +2804,7 @@ async fn profiles_scenario(
         ("#profile-id", "ui-api"),
         ("#profile-name", "Profil synthétique <b>é😀</b>"),
     ] {
-        client
-            .find(Locator::Css(selector))
-            .await?
-            .send_keys(text)
-            .await?;
+        type_text(client, selector, text).await?;
     }
     client
         .find(Locator::Css("#profile-command"))
@@ -5063,6 +5061,21 @@ async fn clear_input(client: &Client, selector: &str) -> Result<()> {
     editable(client, selector).await?.clear().await?;
     // WebDriver clear does not consistently notify input listeners across browsers.
     client.execute("document.querySelector(arguments[0]).dispatchEvent(new Event('input',{bubbles:true}));",vec![json!(selector)]).await?;
+    Ok(())
+}
+
+async fn type_text(client: &Client, selector: &str, text: &str) -> Result<()> {
+    use fantoccini::actions::{InputSource, KeyAction, KeyActions};
+    editable(client, selector).await?.click().await?;
+    // Native keyboard actions also support characters outside ChromeDriver send_keys' BMP limit.
+    let actions = text
+        .chars()
+        .fold(KeyActions::new("text".into()), |actions, value| {
+            actions
+                .then(KeyAction::Down { value })
+                .then(KeyAction::Up { value })
+        });
+    client.perform_actions(actions).await?;
     Ok(())
 }
 

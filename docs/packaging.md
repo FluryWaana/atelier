@@ -12,7 +12,7 @@ Atelier Kanban is in preproduction. Use [GitHub Releases](https://github.com/Flu
 | macOS Intel | `x86_64-apple-darwin` | Signed ZIP payload | None |
 | macOS Apple Silicon | `aarch64-apple-darwin` | Signed ZIP payload | None |
 
-All builds require the [source build tools](getting-started.md#build-from-source), the committed Rust toolchain and lockfile, Trunk 0.22.1 and wasm-bindgen CLI 0.2.130. Windows uses the static C runtime. Import checks use MSVC `dumpbin` discovered through `vswhere` to reject external Visual C++ runtime DLLs. Build tools are not runtime requirements for users.
+All builds require the [source build tools](getting-started.md#build-from-source), the committed Rust toolchain and lockfile, Trunk 0.22.1, wasm-bindgen CLI 0.2.130 and Binaryen 133 (`wasm-opt`). Windows uses the static C runtime. Import checks use MSVC `dumpbin` discovered through `vswhere` to reject external Visual C++ runtime DLLs. Build tools are not runtime requirements for users.
 
 ## UI build
 
@@ -21,7 +21,7 @@ cargo fetch --locked
 cargo xtask build-ui
 ```
 
-Release assets are written to `.artifacts/rust-ui`. The build runs Trunk offline with locked dependencies, externalizes the module loader for the content security policy and validates assets. Limits are 64 MiB per asset and 256 MiB in total.
+Release assets are written to `.artifacts/rust-ui`. The build runs Trunk offline with locked dependencies, minifies HTML, CSS and JavaScript, optimizes WebAssembly at level 1 and removes debug names and producer metadata. Trunk calculates integrity digests after optimization. The build externalizes the module loader for the content security policy and validates assets. Limits are 64 MiB per asset and 256 MiB in total.
 
 `cargo xtask build-ui --dev` writes `.artifacts/rust-ui-dev` using incremental compilation, no debug information and UI optimization level 1. Development output is separate from the release payload.
 

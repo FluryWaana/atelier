@@ -2,6 +2,8 @@
 target = "index.html"
 dist = "../../.artifacts/rust-ui"
 locked = true
+minify = "on_release"
 
 [tools]
 wasm_bindgen = "0.2.130"
+wasm_opt = "version_133"

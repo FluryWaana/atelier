@@ -864,11 +864,9 @@ fn Processes(
                 loading.set(false);
                 return;
             };
-            let targets = cards
-                .get_untracked()
-                .into_iter()
-                .map(|card| card.id)
-                .collect::<Vec<_>>();
+            let targets = cards.with_untracked(|cards| {
+                cards.iter().map(|card| card.id.clone()).collect::<Vec<_>>()
+            });
             let loading = loading.clone();
             let alive = alive.clone();
             spawn_local(async move {

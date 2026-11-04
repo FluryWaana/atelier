@@ -4,7 +4,7 @@ The browser interface for Atelier Kanban uses Leptos CSR and compiles to WebAsse
 
 ## Build
 
-Run from the repository root with the committed Rust toolchain, Trunk 0.22.1 and wasm-bindgen CLI 0.2.130:
+Run from the repository root with the committed Rust toolchain, Trunk 0.22.1, wasm-bindgen CLI 0.2.130 and Binaryen 133 (`wasm-opt`) in PATH:
 
 ```sh
 cargo fetch --locked
@@ -13,7 +13,7 @@ cargo xtask build-ui
 
 Release assets are written to `.artifacts/rust-ui`. For the Windows development preview, `cargo xtask build-ui --dev` writes `.artifacts/rust-ui-dev`.
 
-Trunk bundles `style.css` directly. The build externalizes the module loader for the content security policy and enforces asset size limits. No Node.js or Sass build is required.
+Trunk bundles `style.css` directly and minifies HTML, CSS and JavaScript for release builds. Binaryen optimizes release WebAssembly at level 1 and removes debug names and producer metadata. Development builds retain readable assets and debug names and do not require Binaryen. The build externalizes the module loader for the content security policy and enforces asset size limits. No Node.js or Sass build is required.
 
 ## Components and styling
 

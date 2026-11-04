@@ -57,7 +57,11 @@ fn pinned(program: &str, expected: &str) -> Result<()> {
 }
 
 fn externalize_loader(html: &str) -> Result<(String, String)> {
-    let opening = "<script type=\"module\">";
+    let opening = if html.contains("<script type=\"module\">") {
+        "<script type=\"module\">"
+    } else {
+        "<script type=module>"
+    };
     let (before, remainder) = html
         .split_once(opening)
         .ok_or("Chargeur Trunk absent ou format modifié.")?;
@@ -76,6 +80,9 @@ fn externalize_loader(html: &str) -> Result<(String, String)> {
 fn build_ui(dev: bool) -> Result<()> {
     pinned("trunk", "trunk 0.22.1")?;
     pinned("wasm-bindgen", "wasm-bindgen 0.2.130")?;
+    if !dev {
+        pinned("wasm-opt", "wasm-opt version 133 (version_133)")?;
+    }
     let directory = root().join(if dev {
         ".artifacts/rust-ui-dev"
     } else {
@@ -210,17 +217,22 @@ mod tests {
 
     #[test]
     fn generated_loader_is_external_and_unexpected_scripts_fail_closed() {
-        let (html, loader) = externalize_loader(
-            "<head></head><script type=\"module\">import init from './app.js'; init();</script>",
-        )
-        .unwrap();
-        assert_eq!(loader, "import init from './app.js'; init();");
-        assert!(html.contains("src=\"/atelier-loader.js\""));
-        assert!(!html.contains("import init"));
+        for opening in ["<script type=\"module\">", "<script type=module>"] {
+            let (html, loader) = externalize_loader(&format!(
+                "<head></head>{opening}import init from './app.js'; init();</script>"
+            ))
+            .unwrap();
+            assert_eq!(loader, "import init from './app.js'; init();");
+            assert!(html.contains("src=\"/atelier-loader.js\""));
+            assert!(!html.contains("import init"));
+        }
         for html in [
             "",
             "<script type=\"module\"></script>",
             "<script type=\"module\">a()</script><script>b()</script>",
+            "<script type=module>a()</script><script type=\"module\">b()</script>",
+            "<script type=module></script>",
+            "<script type=module src=\"/unexpected.js\">a()</script>",
         ] {
             assert!(externalize_loader(html).is_err());
         }

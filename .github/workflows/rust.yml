@@ -134,12 +134,19 @@ jobs:
         id: wasm-tools
         with:
           path: ${{ runner.temp }}/atelier-tools
-          key: wasm-tools-${{ runner.os }}-${{ runner.arch }}-rust1.99.1-trunk0.22.1-bindgen0.2.130
+          key: wasm-tools-${{ runner.os }}-${{ runner.arch }}-rust1.99.1-trunk0.22.1-bindgen0.2.130-binaryen133
       - run: cargo install --locked trunk --version 0.22.1 --root "${{ runner.temp }}/atelier-tools"
         if: steps.wasm-tools.outputs.cache-hit != 'true'
       - run: cargo install --locked wasm-bindgen-cli --version 0.2.130 --root "${{ runner.temp }}/atelier-tools"
         if: steps.wasm-tools.outputs.cache-hit != 'true'
+      - name: Install pinned Binaryen for offline UI builds
+        if: steps.wasm-tools.outputs.cache-hit != 'true'
+        run: |
+          curl --fail --location --output "${{ runner.temp }}/binaryen.tar.gz" https://github.com/WebAssembly/binaryen/releases/download/version_133/binaryen-version_133-x86_64-linux.tar.gz
+          echo "2dc9c7813f5375db93d96ead4b78222fcc3e2677bbb832297af4797782a37489  ${{ runner.temp }}/binaryen.tar.gz" | sha256sum --check
+          tar -xzf "${{ runner.temp }}/binaryen.tar.gz" -C "${{ runner.temp }}/atelier-tools"
       - run: echo "${{ runner.temp }}/atelier-tools/bin" >> "$GITHUB_PATH"
+      - run: echo "${{ runner.temp }}/atelier-tools/binaryen-version_133/bin" >> "$GITHUB_PATH"
       - run: cargo fetch --locked
       - run: cargo xtask build-ui
       - name: Preserve built candidate WASM without claiming browser qualification

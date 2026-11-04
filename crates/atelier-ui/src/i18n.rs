@@ -27,6 +27,55 @@ fn locale(value: &str) -> &'static str {
     if value == "en-US" { "en-US" } else { "fr-FR" }
 }
 
+fn catalog(language: &str) -> &'static BTreeMap<String, String> {
+    static ENGLISH: OnceLock<BTreeMap<String, String>> = OnceLock::new();
+    static FRENCH: OnceLock<BTreeMap<String, String>> = OnceLock::new();
+    let (catalog, source) = if language == "en-US" {
+        (&ENGLISH, include_str!("../locales/en-US.json"))
+    } else {
+        (&FRENCH, include_str!("../locales/fr-FR.json"))
+    };
+    catalog.get_or_init(|| serde_json::from_str(source).expect("embedded translation catalog"))
+}
+
+fn translate(language: &str, source: &str) -> String {
+    let translations = catalog(language);
+    if let Some(translated) = translations.get(source) {
+        return translated.clone();
+    }
+    if language != "en-US" || source.is_empty() {
+        return source.to_owned();
+    }
+    // shortcut: some producers still send French text; remove this index when they emit keys.
+    static LEGACY: OnceLock<BTreeMap<&'static str, &'static str>> = OnceLock::new();
+    let legacy = LEGACY.get_or_init(|| {
+        catalog("fr-FR")
+            .iter()
+            .map(|(key, message)| (message.as_str(), key.as_str()))
+            .collect()
+    });
+    if let Some(key) = legacy.get(source)
+        && let Some(translated) = translations.get(*key)
+    {
+        return translated.clone();
+    }
+    // System messages may contain a filename or a server detail; never translate user content.
+    for (pattern, key) in legacy {
+        let Some(translated) = translations.get(*key) else {
+            continue;
+        };
+        if let Some((prefix, suffix)) = pattern.split_once("{0}")
+            && !suffix.contains('{')
+            && let Some(value) = source
+                .strip_prefix(prefix)
+                .and_then(|value| value.strip_suffix(suffix))
+        {
+            return translated.replace("{0}", value);
+        }
+    }
+    source.to_owned()
+}
+
 impl Default for I18n {
     fn default() -> Self {
         let saved = web_sys::window()
@@ -98,59 +147,46 @@ impl I18n {
     }
 
     pub fn text(self, source: &str) -> String {
-        static ENGLISH: OnceLock<BTreeMap<String, String>> = OnceLock::new();
-        static FRENCH: OnceLock<BTreeMap<String, String>> = OnceLock::new();
-        let english = ENGLISH.get_or_init(|| {
-            serde_json::from_str(include_str!("../locales/en-US.json"))
-                .expect("embedded translation catalog")
-        });
-        let french = FRENCH.get_or_init(|| {
-            serde_json::from_str(include_str!("../locales/fr-FR.json"))
-                .expect("embedded translation catalog")
-        });
-        let catalog = if self.0.get() == "en-US" {
-            english
-        } else {
-            french
-        };
-        if let Some(translated) = catalog.get(source) {
-            return translated.clone();
-        }
-        if self.0.get() != "en-US" || source.is_empty() {
-            return source.to_owned();
-        }
-        // shortcut: some producers still send French text; remove this index when they emit keys.
-        static LEGACY: OnceLock<BTreeMap<String, String>> = OnceLock::new();
-        let legacy = LEGACY.get_or_init(|| {
-            french
-                .iter()
-                .map(|(key, message)| (message.clone(), key.clone()))
-                .collect()
-        });
-        if let Some(key) = legacy.get(source) {
-            return english[key].clone();
-        }
-        // System messages may contain a filename or a server detail; never translate user content.
-        for (pattern, key) in legacy {
-            let Some(translated) = english.get(key) else {
-                continue;
-            };
-            if let Some((prefix, suffix)) = pattern.split_once("{0}")
-                && !suffix.contains('{')
-                && let Some(value) = source
-                    .strip_prefix(prefix)
-                    .and_then(|value| value.strip_suffix(suffix))
-            {
-                return translated.replace("{0}", value);
-            }
-        }
-        source.to_owned()
+        translate(self.0.get(), source)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{two_arguments, worktree_parts};
+    use super::{catalog, translate, two_arguments, worktree_parts};
+
+    #[test]
+    fn translations_preserve_catalogs_legacy_messages_and_user_content() {
+        for language in ["fr-FR", "en-US"] {
+            for (key, message) in catalog(language) {
+                assert_eq!(translate(language, key), *message);
+            }
+            let unknown = ["message", "synthetic_unknown"].join(".");
+            for source in ["", "Synthetic user task", &unknown] {
+                assert_eq!(translate(language, source), source);
+            }
+        }
+        let french = catalog("fr-FR");
+        let english = catalog("en-US");
+        let mut patterns = 0;
+        for (key, pattern) in french {
+            if let Some((_, suffix)) = pattern.split_once("{0}")
+                && !suffix.contains('{')
+            {
+                let source = pattern.replace("{0}", "synthetic-file.txt");
+                assert_eq!(
+                    translate("en-US", &source),
+                    english[key].replace("{0}", "synthetic-file.txt")
+                );
+                patterns += 1;
+            }
+        }
+        assert!(patterns > 0);
+        assert_eq!(
+            translate("en-US", &french["message.save"]),
+            english["message.save"]
+        );
+    }
 
     #[test]
     fn worktree_error_keeps_the_role_and_full_cause() {

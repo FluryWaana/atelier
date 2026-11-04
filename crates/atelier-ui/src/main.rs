@@ -582,30 +582,32 @@ fn App() -> impl IntoView {
     let visible = move |brainstorms: bool| {
         let query = search.get().trim().to_lowercase();
         let repo = repository.get();
-        cards
-            .get()
-            .into_iter()
-            .filter(|card| {
-                card.fields.flag("brainstormSession").unwrap_or(false) == brainstorms
-                    && card.fields.flag("archived").unwrap_or(false)
-                        == (view.get() == WorkspaceView::Archives)
-                    && (repo.is_empty() || field(&card.fields, "repo") == repo)
-                    && (query.is_empty()
-                        || format!(
-                            "{} {} {}",
-                            card.title.clone(),
-                            field(&card.fields, "description"),
-                            card.fields
-                                .get::<atelier_core::document::Document>("ticket")
-                                .ok()
-                                .flatten()
-                                .map(|ticket| field(&ticket, "key"))
-                                .unwrap_or_default()
-                        )
-                        .to_lowercase()
-                        .contains(&query))
-            })
-            .collect::<Vec<_>>()
+        cards.with(|cards| {
+            cards
+                .iter()
+                .filter(|card| {
+                    card.fields.flag("brainstormSession").unwrap_or(false) == brainstorms
+                        && card.fields.flag("archived").unwrap_or(false)
+                            == (view.get() == WorkspaceView::Archives)
+                        && (repo.is_empty() || field(&card.fields, "repo") == repo)
+                        && (query.is_empty()
+                            || format!(
+                                "{} {} {}",
+                                card.title,
+                                field(&card.fields, "description"),
+                                card.fields
+                                    .get::<atelier_core::document::Document>("ticket")
+                                    .ok()
+                                    .flatten()
+                                    .map(|ticket| field(&ticket, "key"))
+                                    .unwrap_or_default()
+                            )
+                            .to_lowercase()
+                            .contains(&query))
+                })
+                .cloned()
+                .collect::<Vec<_>>()
+        })
     };
     let onboarding = move || {
         matches!(view.get(), WorkspaceView::Board | WorkspaceView::Overview)
@@ -1474,15 +1476,17 @@ fn App() -> impl IntoView {
                 <span class="results-count">
                     <strong id="total">
                         {move || {
-                            visible(false)
-                                .into_iter()
+                            let visible = visible(false);
+                            let filter = focus_filter.get();
+                            cards.with(|cards| board.runs.with(|runs| visible
+                                .iter()
                                 .filter(|card| matches_focus(
                                     card,
-                                    &cards.get(),
-                                    &board.runs.get(),
-                                    &focus_filter.get(),
+                                    cards,
+                                    runs,
+                                    &filter,
                                 ))
-                                .count()
+                                .count()))
                         }}
                     </strong>
                     " "
@@ -1507,15 +1511,16 @@ fn App() -> impl IntoView {
                                     <span hidden={filter
                                         == "all"}>
                                         {move || {
-                                            visible(false)
+                                            let visible = visible(false);
+                                            cards.with(|cards| board.runs.with(|runs| visible
                                                 .iter()
                                                 .filter(|card| matches_focus(
                                                     card,
-                                                    &cards.get(),
-                                                    &board.runs.get(),
+                                                    cards,
+                                                    runs,
                                                     filter,
                                                 ))
-                                                .count()
+                                                .count()))
                                         }}
                                     </span>
                                 </crate::button::Button>
@@ -1635,18 +1640,20 @@ fn App() -> impl IntoView {
                             if view.get() == WorkspaceView::Archives {
                                 Vec::new()
                             } else {
-                                visible(false)
+                                let visible = visible(false);
+                                let filter = focus_filter.get();
+                                cards.with(|cards| board.runs.with(|runs| visible
                                     .into_iter()
                                     .filter(|card| {
                                         field(&card.fields, "status") == status
                                             && matches_focus(
                                                 card,
-                                                &cards.get(),
-                                                &board.runs.get(),
-                                                &focus_filter.get(),
+                                                cards,
+                                                runs,
+                                                &filter,
                                             )
                                     })
-                                    .collect::<Vec<_>>()
+                                    .collect::<Vec<_>>()))
                             }
                         };
                         view! {
@@ -2298,6 +2305,39 @@ fn matches_focus(
     blocked || sync_error || automation || run_attention
 }
 
+#[cfg(test)]
+mod focus_tests {
+    use super::*;
+
+    #[test]
+    fn focus_filters_keep_review_dependencies_and_agent_failures() {
+        let cards: Vec<Card> = serde_json::from_value(serde_json::json!([
+            {"id":"review", "title":"Review", "status":"review"},
+            {"id":"blocked", "title":"Blocked", "status":"todo", "blockedBy":["missing"]},
+            {"id":"ready", "title":"Ready", "status":"todo", "blockedBy":["done"]},
+            {"id":"failed", "title":"Failed run", "status":"todo"},
+            {"id":"done", "title":"Done", "status":"done", "blockedBy":["missing"]}
+        ]))
+        .unwrap();
+        let runs = vec![
+            serde_json::from_value(serde_json::json!({
+                "cardId":"failed", "status":"failed"
+            }))
+            .unwrap(),
+        ];
+        let ids = |filter| {
+            cards
+                .iter()
+                .filter(|card| matches_focus(card, &cards, &runs, filter))
+                .map(|card| card.id.as_str())
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(ids("all"), ["review", "blocked", "ready", "failed", "done"]);
+        assert_eq!(ids("review"), ["review"]);
+        assert_eq!(ids("attention"), ["blocked", "failed"]);
+    }
+}
+
 #[component]
 fn NavigationIcon(kind: &'static str, #[prop(default = false)] view_icon: bool) -> impl IntoView {
     let shape=match kind {
@@ -2435,9 +2475,11 @@ fn CommandPalette(
         items
             .into_iter()
             .filter(|(_, title, detail)| {
-                words
-                    .iter()
-                    .all(|word| command_search(&format!("{title} {detail}")).contains(word))
+                if words.is_empty() {
+                    return true;
+                }
+                let text = command_search(&format!("{title} {detail}"));
+                words.iter().all(|word| text.contains(word))
             })
             .take(30)
             .collect::<Vec<_>>()
