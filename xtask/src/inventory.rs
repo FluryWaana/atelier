@@ -141,16 +141,25 @@ fn render(root: &Path) -> Result<String> {
 }
 
 pub(super) fn command(check: bool) -> Result<()> {
-    let root = crate::root();
-    let content = render(&root)?;
+    update(&crate::root(), check)
+}
+
+fn update(root: &Path, check: bool) -> Result<()> {
+    let content = render(root)?;
     let docs = root.join("docs");
     if !ordinary(&docs)?.is_dir() {
         return Err("Dossier de documentation ordinaire requis.".into());
     }
     let destination = docs.join("source-inventory.md");
-    let metadata = ordinary(&destination)?;
-    if !metadata.is_file() || metadata.len() > 8 * 1024 * 1024 {
-        return Err("Inventaire existant invalide ou trop volumineux.".into());
+    if let Err(error) = fs::symlink_metadata(&destination) {
+        if check || error.kind() != std::io::ErrorKind::NotFound {
+            return Err(error.into());
+        }
+    } else {
+        let metadata = ordinary(&destination)?;
+        if !metadata.is_file() || metadata.len() > 8 * 1024 * 1024 {
+            return Err("Inventaire existant invalide ou trop volumineux.".into());
+        }
     }
     if check {
         if fs::read_to_string(destination)?.replace("\r\n", "\n") != content {
@@ -187,6 +196,23 @@ mod tests {
         for file in FILES {
             fs::write(root.join(file), "synthetic").unwrap();
         }
+    }
+    #[test]
+    fn generation_creates_a_missing_inventory_while_check_remains_read_only() {
+        let temporary = tempfile::tempdir().unwrap();
+        fixture(temporary.path());
+        fs::create_dir(temporary.path().join("docs")).unwrap();
+        let destination = temporary.path().join("docs/source-inventory.md");
+        assert!(update(temporary.path(), true).is_err());
+        assert!(!destination.exists());
+        update(temporary.path(), false).unwrap();
+        update(temporary.path(), true).unwrap();
+        fs::write(&destination, "stale synthetic inventory").unwrap();
+        assert!(update(temporary.path(), true).is_err());
+        assert_eq!(
+            fs::read_to_string(destination).unwrap(),
+            "stale synthetic inventory"
+        );
     }
     #[test]
     fn inventory_is_sorted_deterministic_and_does_not_enter_excluded_data() {
