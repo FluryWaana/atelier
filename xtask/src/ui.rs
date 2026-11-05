@@ -1434,6 +1434,10 @@ async fn updates_scenario(
         let reopened=crate::browser_fixture::wait_for_open().await?;
         let next=session::read(&data)?;if next==token{return Err("La session n’a pas été renouvelée après récupération.".into());}
         // WebDriver follows the actual native open request instead of constructing a session URL.
+        let reopened=if std::env::var("ATELIER_TEST_BROWSER").as_deref()==Ok("safari") {
+            // WebDriver file navigation lacks the sandbox grant supplied by macOS LaunchServices.
+            crate::browser_fixture::safari_destination(&reopened, &data, &address)?
+        } else { reopened };
         client.goto("about:blank").await?;
         client.goto(&reopened).await.map_err(|_| "Ouverture automatique d’Atelier refusée par le navigateur synthétique.")?;
         wait_dom(client,"return document.querySelector('#prototype-board')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
@@ -5145,8 +5149,23 @@ async fn type_text(client: &Client, selector: &str, text: &str) -> Result<()> {
     let element = editable(client, selector).await?;
     element.click().await?;
     if std::env::var("ATELIER_TEST_BROWSER").as_deref() == Ok("safari") {
-        // Safari key actions can lose letters after accented characters.
-        element.send_keys(text).await?;
+        // Serialize Safari's native input with reactive updates instead of sending a burst.
+        let mut expected = String::new();
+        for character in text.chars() {
+            element.send_keys(&character.to_string()).await?;
+            expected.push(character);
+            let actual = client
+                .execute(
+                    "return document.querySelector(arguments[0])?.value;",
+                    vec![json!(selector)],
+                )
+                .await?;
+            if actual != json!(expected) {
+                return Err(
+                    format!("Saisie native Safari incomplète dans {selector} : {actual}").into(),
+                );
+            }
+        }
     } else {
         // Native keyboard actions also support characters outside ChromeDriver send_keys' BMP limit.
         let actions = text
