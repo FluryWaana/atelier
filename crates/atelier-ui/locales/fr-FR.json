@@ -1724,6 +1724,7 @@
   "message.preparing_update": "Préparation de la mise à jour…",
   "message.version_ready_for_confirmation": "Version prête à confirmer",
   "message.stopping_safely": "Arrêt contrôlé en cours…",
+  "message.update_reconnect": "Cet onglet n'est plus connecté. Rouvrez Atelier depuis son icône ou son lanceur pour consulter le résultat de la mise à jour.",
   "message.switching_version": "Changement de version…",
   "message.checking_startup": "Contrôle du démarrage…",
   "message.update_verified": "Mise à jour vérifiée",

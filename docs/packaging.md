@@ -103,6 +103,8 @@ The server rereads the selected release before download. Signed metadata is auth
 
 A source build can inspect releases. Activation requires an installed package with trusted metadata. Unsaved drafts block restart.
 
+Restarting renews the local browser session. The previous tab shows reconnection instructions when its connection closes. Reopen Atelier from its tray icon or launcher to see the final update result with the new session.
+
 ## Backup and recovery
 
 Activation requires all uncertain external effects to be resolved. The worker stops the server, locks the workspace, checks SQLite integrity and creates an atomic catalog backup. An absent database is not created by this step. A failure prevents activation.

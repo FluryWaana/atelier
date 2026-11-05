@@ -21,6 +21,93 @@ fn phase_label(phase: Phase) -> &'static str {
     }
 }
 
+fn follow_restart(action: &str, phase: Option<Phase>) -> bool {
+    matches!(action, "apply" | "recover")
+        && matches!(
+            phase,
+            Some(Phase::Waiting | Phase::Activating | Phase::Trying | Phase::RollingBack)
+        )
+}
+
+fn reconnect_required(action: &str, message: &str) -> bool {
+    matches!(action, "apply" | "recover")
+        && matches!(
+            message,
+            "message.connection_interrupted"
+                | "message.connection_interrupted_check_the_current_state_before_trying_aga"
+                | "message.session_expired_or_missing_reopen_atelier_using_its_launcher"
+        )
+}
+
+async fn poll_delay() {
+    let delay = js_sys::Promise::new(&mut |resolve, _| {
+        set_timeout(
+            move || {
+                let _ = resolve.call0(&wasm_bindgen::JsValue::NULL);
+            },
+            std::time::Duration::from_millis(500),
+        );
+    });
+    let _ = wasm_bindgen_futures::JsFuture::from(delay).await;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn update_tracking_stops_on_a_result_or_a_lost_restart_connection() {
+        for action in ["apply", "recover", "install", "reload", "cancel"] {
+            let restarting = matches!(action, "apply" | "recover");
+            for (phase, running) in [
+                (None, false),
+                (Some(Phase::Preparing), false),
+                (Some(Phase::Prepared), false),
+                (Some(Phase::Waiting), true),
+                (Some(Phase::Activating), true),
+                (Some(Phase::Trying), true),
+                (Some(Phase::RollingBack), true),
+                (Some(Phase::Committed), false),
+                (Some(Phase::RolledBack), false),
+                (Some(Phase::Cancelled), false),
+                (Some(Phase::Failed), false),
+                (Some(Phase::Uncertain), false),
+            ] {
+                assert_eq!(
+                    follow_restart(action, phase),
+                    restarting && running,
+                    "{action}: {phase:?}"
+                );
+            }
+            for (message, disconnected) in [
+                ("message.connection_interrupted", true),
+                (
+                    "message.connection_interrupted_check_the_current_state_before_trying_aga",
+                    true,
+                ),
+                (
+                    "message.session_expired_or_missing_reopen_atelier_using_its_launcher",
+                    true,
+                ),
+                ("message.operation_refused", false),
+                ("message.invalid_server_response", false),
+                (
+                    "message.finish_or_reconcile_connector_writes_before_updating",
+                    false,
+                ),
+                ("message.a_change_is_in_progress_try_again_shortly", false),
+                ("", false),
+            ] {
+                assert_eq!(
+                    reconnect_required(action, message),
+                    restarting && disconnected,
+                    "{action}: {message}"
+                );
+            }
+        }
+    }
+}
+
 #[component]
 pub fn Updates(
     token: StoredValue<Result<String, String>>,
@@ -34,7 +121,9 @@ pub fn Updates(
     let checked = RwSignal::new(false);
 
     let loading = RwSignal::new(false);
+    let downloading = RwSignal::new(false);
     let uncertain = RwSignal::new(false);
+    let reconnect = RwSignal::new(false);
     let error = RwSignal::new(String::new());
     let notice = RwSignal::new(String::new());
     Effect::new(move |_| dirty.set(pending.get()));
@@ -44,7 +133,7 @@ pub fn Updates(
     let operation = move || status.get().and_then(|status| status.operation);
     let system = move || status.get().is_some_and(|status| status.system_managed);
     let execute = StoredValue::new_local(move |action: &'static str| {
-        if pending.get_untracked() || loading.get_untracked() {
+        if pending.get_untracked() || loading.get_untracked() || reconnect.get_untracked() {
             return;
         }
         if action != "reload" && system() {
@@ -89,6 +178,7 @@ pub fn Updates(
         } else {
             pending.set(true);
         }
+        downloading.set(action == "install");
         if matches!(action, "install" | "apply" | "recover") {
             uncertain.set(true);
         }
@@ -101,15 +191,7 @@ pub fn Updates(
                 let credential = credential.clone();
                 spawn_local(async move {
                     while alive.get() && pending.get_untracked() {
-                        let delay = js_sys::Promise::new(&mut |resolve, _| {
-                            set_timeout(
-                                move || {
-                                    let _ = resolve.call0(&wasm_bindgen::JsValue::NULL);
-                                },
-                                std::time::Duration::from_millis(500),
-                            );
-                        });
-                        let _ = wasm_bindgen_futures::JsFuture::from(delay).await;
+                        poll_delay().await;
                         if !alive.get() || !pending.get_untracked() {
                             break;
                         }
@@ -133,15 +215,26 @@ pub fn Updates(
                     )
                     .await?;
                 }
-                let current = read(&credential, "/api/updates")
-                    .await?
-                    .json::<Status>()
-                    .await
-                    .map_err(|_| "message.invalid_server_response".to_owned())?;
-                if alive.get() {
+                let current = loop {
+                    let current = read(&credential, "/api/updates")
+                        .await?
+                        .json::<Status>()
+                        .await
+                        .map_err(|_| "message.invalid_server_response".to_owned())?;
+                    if !alive.get() {
+                        return Ok((current, None));
+                    }
                     status.set(Some(current.clone()));
-                    uncertain.set(false);
-                }
+                    if !follow_restart(action, current.operation.as_ref().map(|value| value.state))
+                    {
+                        break current;
+                    }
+                    poll_delay().await;
+                    if !alive.get() {
+                        return Ok((current, None));
+                    }
+                };
+                uncertain.set(false);
                 let latest = if action == "reload" {
                     Some(
                         read(&credential, "/api/updates/check")
@@ -168,9 +261,16 @@ pub fn Updates(
                     status.set(Some(value));
                     uncertain.set(false);
                 }
+                Err(message) if reconnect_required(action, &message) => {
+                    reconnect.set(true);
+                    status.set(None);
+                    release.set(None);
+                    checked.set(false);
+                    crate::focus_element("update-reconnect");
+                }
                 Err(message) => error.set(message),
             }
-            if matches!(action, "install" | "apply" | "recover") {
+            if matches!(action, "install" | "apply" | "recover") && !reconnect.get_untracked() {
                 notice.set(
                     "message.the_command_may_have_been_received_atelier_restarts_if_it_is_acc"
                         .into(),
@@ -197,6 +297,7 @@ pub fn Updates(
                 }}
             </p>
             <p>{move || i18n.text("message.github_update_backup")}</p>
+            <div id="update-connected" hidden={move || reconnect.get()}>
             <p>
                 {move || i18n.text("message.current_version")}" "
                 {move || status.get().map(|status| status.current_version)}
@@ -210,7 +311,7 @@ pub fn Updates(
                 {move || i18n.text("message.first_install_the_rust_package_with_its_trusted_key_to_use_this")}
             </p>
             <crate::button::Button
-                disabled={Signal::derive(move || pending.get() || loading.get())}
+                disabled={Signal::derive(move || pending.get() || loading.get() || reconnect.get())}
                 {..}
                 id="reload-updates"
                 type="button"
@@ -221,7 +322,7 @@ pub fn Updates(
             <p role="status" hidden={move || !loading.get()}>
                 {move || i18n.text("message.github_update_checking")}
             </p>
-            <div class="update-progress" hidden={move || !pending.get()}>
+            <div class="update-progress" hidden={move || !pending.get() || !downloading.get()}>
                 <label for="update-download-progress">
                     {move || {
                         i18n.text(
@@ -407,6 +508,10 @@ pub fn Updates(
                     </crate::button::Button>
                 </fieldset>
             </div>
+            </div>
+            <p id="update-reconnect" role="status" tabindex="-1" hidden={move || !reconnect.get()}>
+                {move || i18n.text("message.update_reconnect")}
+            </p>
             <p id="updates-error" class="error" role="alert">
                 {move || i18n.text(&error.get())}
             </p>

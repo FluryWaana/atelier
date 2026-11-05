@@ -790,7 +790,7 @@ dialog::backdrop { background: rgb(0 0 0 / .75); backdrop-filter: none; }
 /* Updates share the settings column. Progress uses the same full width on mobile. */
 #updates-settings { max-width: 720px; }
 #updates-settings > h3 { margin: 0 0 8px; }
-#updates-settings > p { margin: 8px 0 16px; }
+#updates-settings > p, #update-connected > p { margin: 8px 0 16px; }
 #updates-settings button { min-height: 44px; white-space: normal; }
 #updates-settings details { margin-block: 20px; overflow-wrap: anywhere; }
 #updates-settings .update-progress { margin-block: 24px; padding: 20px; background: var(--surface); border-radius: 8px; }

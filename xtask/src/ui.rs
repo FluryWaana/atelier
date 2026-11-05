@@ -1421,6 +1421,7 @@ async fn updates_scenario(
             if Instant::now()>=deadline { return Err(format!("Récupération navigateur trop longue ({:?}) : {}",operation.state,operation.message).into()); }
             tokio::time::sleep(Duration::from_millis(100)).await;
         }
+        wait_dom(client,"return document.querySelector('#update-reconnect')?.hidden === false && document.activeElement?.id === 'update-reconnect' && document.querySelector('#update-phase')?.getClientRects().length === 0 && document.querySelector('#reload-updates')?.disabled === true;",vec![]).await?;
         let next=session::read(&data)?;if next==token{return Err("La session n’a pas été renouvelée après récupération.".into());}
         // Reopening must mount a fresh page: a fragment-only navigation retains the old session.
         client.goto("about:blank").await.map_err(|error|format!("Updates : fermeture de l’ancien document : {error:?}").replace(&token,"[session]").replace(&next,"[session]").chars().take(2000).collect::<String>())?;

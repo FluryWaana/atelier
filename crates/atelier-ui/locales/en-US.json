@@ -1724,6 +1724,7 @@
   "message.preparing_update": "Preparing update…",
   "message.version_ready_for_confirmation": "Version ready for confirmation",
   "message.stopping_safely": "Stopping safely…",
+  "message.update_reconnect": "This tab is no longer connected. Reopen Atelier from its icon or launcher to check the update result.",
   "message.switching_version": "Switching version…",
   "message.checking_startup": "Checking startup…",
   "message.update_verified": "Update verified",
