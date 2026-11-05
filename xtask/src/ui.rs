@@ -220,6 +220,12 @@ async fn start_server(
     let search = synthetic_search_path(&search)?;
     let mut server = command(executable);
     server.env_clear().env("PATH", search);
+    if let Some(installation) = atelier_app::infrastructure::installed::locate(
+        executable,
+        atelier_app::infrastructure::package::native_target()?,
+    )? {
+        server.env("ATELIER_BROWSER_INSTALLATION", installation.root());
+    }
     for key in [
         "SYSTEMROOT",
         "WINDIR",
@@ -236,6 +242,8 @@ async fn start_server(
         "ATELIER_TEST_DISPOSABLE_KEYRING",
         "ATELIER_TEST_KEYCHAIN",
         "RUNNER_TEMP",
+        "ATELIER_BROWSER",
+        "ATELIER_BROWSER_CAPTURE",
     ] {
         if let Some(value) = std::env::var_os(key) {
             server.env(key, value);
@@ -1412,6 +1420,7 @@ async fn updates_scenario(
         wait_dom(client,"return document.querySelector('#save-settings')?.disabled === true;",vec![]).await?;click(client,"#settings-tab-updates").await?;
         click(client,"#reload-updates").await?;
         wait_dom(client,"return document.querySelector('#updates-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
+        crate::browser_fixture::clear_capture()?;
         click(client,"#apply-update").await.map_err(|error|format!("Updates : clic natif d’activation : {error:?}").replace(&token,"[session]").chars().take(2000).collect::<String>())?;
         let deadline=Instant::now()+Duration::from_secs(120);
         loop {
@@ -1422,10 +1431,11 @@ async fn updates_scenario(
             tokio::time::sleep(Duration::from_millis(100)).await;
         }
         wait_dom(client,"return document.querySelector('#update-reconnect')?.hidden === false && document.activeElement?.id === 'update-reconnect' && document.querySelector('#update-phase')?.getClientRects().length === 0 && document.querySelector('#reload-updates')?.disabled === true;",vec![]).await?;
+        let reopened=crate::browser_fixture::wait_for_open().await?;
         let next=session::read(&data)?;if next==token{return Err("La session n’a pas été renouvelée après récupération.".into());}
-        // Reopening must mount a fresh page: a fragment-only navigation retains the old session.
-        client.goto("about:blank").await.map_err(|error|format!("Updates : fermeture de l’ancien document : {error:?}").replace(&token,"[session]").replace(&next,"[session]").chars().take(2000).collect::<String>())?;
-        client.goto(&format!("{address}/#session={next}")).await.map_err(|error|format!("Updates : réouverture après récupération : {error:?}").replace(&token,"[session]").replace(&next,"[session]").chars().take(2000).collect::<String>())?;
+        // WebDriver follows the actual native open request instead of constructing a session URL.
+        client.goto("about:blank").await?;
+        client.goto(&reopened).await.map_err(|_| "Ouverture automatique d’Atelier refusée par le navigateur synthétique.")?;
         wait_dom(client,"return document.querySelector('#prototype-board')?.getAttribute('aria-busy') === 'false';",vec![]).await?;
         click(client,"#check-updates").await.map_err(|error|format!("Updates : ouverture de la page après récupération : {error:?}").replace(&token,"[session]").replace(&next,"[session]").chars().take(2000).collect::<String>())?;
         wait_dom(client,"return location.pathname === '/updates' && document.querySelector('#update-phase')?.textContent === 'Version précédente rétablie' && document.querySelector('#updates-settings')?.getAttribute('aria-busy') === 'false';",vec![]).await?;

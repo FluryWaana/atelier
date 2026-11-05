@@ -7,7 +7,7 @@
 <p align="center">A local workspace for tasks, coding agents, Git reviews and time tracking.</p>
 
 <p align="center">
-  <a href="Cargo.toml"><img src="https://img.shields.io/badge/version-0.1.12-8b70b6" alt="Source version 0.1.12"></a>
+  <a href="Cargo.toml"><img src="https://img.shields.io/badge/version-0.1.13-8b70b6" alt="Source version 0.1.13"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0--or--later-blue?logo=gnu" alt="License AGPL 3.0 or later"></a>
   <a href="rust-toolchain.toml"><img src="https://img.shields.io/badge/Rust-1.99.1-black?logo=rust" alt="Rust 1.99.1"></a>
   <img src="https://img.shields.io/badge/status-preproduction-d6a34b" alt="Preproduction">

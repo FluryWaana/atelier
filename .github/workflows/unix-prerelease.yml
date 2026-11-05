@@ -9,7 +9,7 @@ on:
       tag:
         description: Existing prerelease tag to complete without replacing assets
         required: true
-        default: v0.1.12
+        default: v0.1.13
         type: string
 permissions:
   contents: read

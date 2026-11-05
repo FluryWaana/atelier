@@ -103,7 +103,9 @@ The server rereads the selected release before download. Signed metadata is auth
 
 A source build can inspect releases. Activation requires an installed package with trusted metadata. Unsaved drafts block restart.
 
-Restarting renews the local browser session. The previous tab shows reconnection instructions when its connection closes. Reopen Atelier from its tray icon or launcher to see the final update result with the new session.
+Restarting renews the local browser session. After a verified activation or rollback, Atelier opens its browser interface with the new session when the server was previously running. This also applies to updates requested from the command line. The previous tab shows the restart state when its connection closes. If the operating system cannot open the browser, the verified update result is kept and Atelier remains available through its tray icon or launcher.
+
+By default, Atelier uses the operating system's browser opener. `ATELIER_BROWSER` can select an absolute executable path instead. Atelier passes the browser address as its single argument without a shell. Synthetic verification uses a compiled opener to capture this request without opening a personal browser.
 
 ## Backup and recovery
 

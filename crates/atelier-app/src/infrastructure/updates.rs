@@ -544,6 +544,10 @@ async fn rollback(
 }
 
 pub async fn worker(root: &Path, id: &str, recovery: bool) -> Result<()> {
+    worker_mode(root, id, recovery, true).await
+}
+
+async fn worker_mode(root: &Path, id: &str, recovery: bool, browser: bool) -> Result<()> {
     require_user_update(root)?;
     let mut installation = installed::open_recovery(root, package::native_target()?)?
         .ok_or("Installation Rust absente.")?;
@@ -623,23 +627,30 @@ pub async fn worker(root: &Path, id: &str, recovery: bool) -> Result<()> {
         }
         .await
     };
-    if let Err(error) = result {
+    let result = if let Err(error) = result {
         let reason = error.to_string().chars().take(500).collect::<String>();
         if !recovery
             && rollback(&mut installation, &mut journal, Some(&reason))
                 .await
                 .is_ok()
         {
+            Err(error)
+        } else {
+            let message = format!(
+                "Récupération interrompue : {}. Aucun fichier de données remplacé.",
+                error.to_string().chars().take(500).collect::<String>()
+            );
+            phase(&installation, &mut journal, Phase::Uncertain, &message)?;
             return Err(error);
         }
-        let message = format!(
-            "Récupération interrompue : {}. Aucun fichier de données remplacé.",
-            error.to_string().chars().take(500).collect::<String>()
-        );
-        phase(&installation, &mut journal, Phase::Uncertain, &message)?;
-        return Err(error);
+    } else {
+        Ok(())
+    };
+    // Opening the browser cannot invalidate a verified activation or rollback.
+    if browser && journal.restart {
+        launcher::open(&journal.data, journal.port).await?;
     }
-    Ok(())
+    result
 }
 
 pub async fn recover_if_needed(executable: &Path) -> Result<()> {
@@ -679,7 +690,7 @@ pub async fn recover_if_needed(executable: &Path) -> Result<()> {
             }
         } else if journal.operation.state.maintenance() {
             drop(directory);
-            worker(&root, &journal.operation.id, true).await?;
+            worker_mode(&root, &journal.operation.id, true, false).await?;
         }
     }
     Ok(())

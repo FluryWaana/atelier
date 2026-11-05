@@ -203,6 +203,11 @@ fn require_owner(observed: &Value, owner: Option<u32>) -> Result<()> {
 }
 
 async fn open_browser(address: &str) -> Result<()> {
+    if let Some(program) = std::env::var_os("ATELIER_BROWSER") {
+        let program = Path::new(&program);
+        validate_browser_program(program)?;
+        return run_browser(program, address).await;
+    }
     #[cfg(windows)]
     {
         use windows_sys::Win32::UI::{Shell::ShellExecuteW, WindowsAndMessaging::SW_SHOWNORMAL};
@@ -233,27 +238,60 @@ async fn open_browser(address: &str) -> Result<()> {
         } else {
             "/usr/bin/xdg-open"
         };
-        let mut child = Command::new(program)
-            .arg(address)
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .spawn()?;
-        match tokio::time::timeout(Duration::from_secs(15), child.wait()).await {
-            Ok(Ok(status)) if status.success() => Ok(()),
-            Ok(_) => {
-                Err("Le navigateur n’a pas pu ouvrir Atelier. Le serveur reste disponible.".into())
-            }
-            Err(_) => {
-                // Some desktop openers remain attached to the browser; never kill that external application.
-                tokio::spawn(async move {
-                    let _ = child.wait().await;
-                });
-                Err(
-                    "L’ouverture du navigateur n’a pas été confirmée. Le serveur reste disponible."
-                        .into(),
-                )
-            }
+        run_browser(Path::new(program), address).await
+    }
+}
+
+fn validate_browser_program(program: &Path) -> Result<()> {
+    if !program.is_absolute() {
+        return Err("ATELIER_BROWSER doit désigner un fichier exécutable absolu.".into());
+    }
+    let metadata = std::fs::metadata(program)?;
+    if !metadata.is_file() {
+        return Err("ATELIER_BROWSER doit désigner un fichier exécutable.".into());
+    }
+    #[cfg(windows)]
+    if !program
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("exe"))
+    {
+        return Err("ATELIER_BROWSER doit désigner un fichier .exe.".into());
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        if metadata.permissions().mode() & 0o111 == 0 {
+            return Err("ATELIER_BROWSER doit désigner un fichier exécutable.".into());
+        }
+    }
+    Ok(())
+}
+
+async fn run_browser(program: &Path, address: &str) -> Result<()> {
+    let mut command = Command::new(program);
+    command
+        .arg(address)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    #[cfg(windows)]
+    command.creation_flags(0x08000000);
+    let mut child = command.spawn()?;
+    match tokio::time::timeout(Duration::from_secs(15), child.wait()).await {
+        Ok(Ok(status)) if status.success() => Ok(()),
+        Ok(_) => {
+            Err("Le navigateur n’a pas pu ouvrir Atelier. Le serveur reste disponible.".into())
+        }
+        Err(_) => {
+            // Some desktop openers remain attached to the browser; never kill that external application.
+            tokio::spawn(async move {
+                let _ = child.wait().await;
+            });
+            Err(
+                "L’ouverture du navigateur n’a pas été confirmée. Le serveur reste disponible."
+                    .into(),
+            )
         }
     }
 }
@@ -275,6 +313,23 @@ mod tests {
             atomic::{AtomicUsize, Ordering},
         },
     };
+
+    #[test]
+    fn browser_override_requires_an_absolute_executable_file() {
+        validate_browser_program(&std::env::current_exe().unwrap()).unwrap();
+        assert!(validate_browser_program(Path::new("relative-browser")).is_err());
+        let directory = tempfile::tempdir().unwrap();
+        assert!(validate_browser_program(directory.path()).is_err());
+        assert!(validate_browser_program(&directory.path().join("missing.exe")).is_err());
+        let script = directory.path().join("browser.cmd");
+        std::fs::write(&script, b"synthetic non-executable").unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o600)).unwrap();
+        }
+        assert!(validate_browser_program(&script).is_err());
+    }
 
     #[test]
     #[ignore = "Child fixture invoked only by the bounded launcher readiness test"]

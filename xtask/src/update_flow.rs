@@ -184,7 +184,7 @@ async fn terminal(root: &Path, id: &str) -> Result<Phase> {
         if operation.id != id {
             return Err("Le journal de qualification a changé.".into());
         }
-        if !operation.state.pending() {
+        if !operation.state.pending() && DataLock::acquire(&root.join("update-lock")).is_ok() {
             return Ok(operation.state);
         }
         if Instant::now() >= deadline {
@@ -271,10 +271,12 @@ pub(super) async fn test_installed(
         port,
     )
     .await?;
+    crate::browser_fixture::clear_capture()?;
     updates::apply(&installation, &preview.id, true).await?;
     if terminal(&installation, &preview.id).await? != Phase::Committed {
         return Err("Upgrade Setup non validé.".into());
     }
+    crate::browser_fixture::wait_for_open().await?;
     let current = installed::open(&installation, payload::native_target()?)?
         .ok_or("Installation mise à jour absente.")?;
     if current.current().previous.as_ref() != Some(&old) || current.current().active.id == old.id {
@@ -461,10 +463,12 @@ async fn test_inner(original: Option<&Path>, prepared_successor: Option<&Path>) 
     {
         return Err("Activation non confirmée acceptée.".into());
     }
+    crate::browser_fixture::clear_capture()?;
     updates::apply(&installation, &preview.id, true).await?;
     if terminal(&installation, &preview.id).await? != Phase::Committed {
         return Err("La mise à jour native réelle n’a pas été validée.".into());
     }
+    crate::browser_fixture::wait_for_open().await?;
     let observed = LocalHttp::new()?
         .authenticated_health(&address, || session::read_optional(&data))
         .await?
@@ -512,10 +516,14 @@ async fn test_inner(original: Option<&Path>, prepared_successor: Option<&Path>) 
         &broken,
     )?;
     let preview = updates::preview(&installation, &bad, &bad_signature, &data, port).await?;
+    crate::browser_fixture::clear_capture()?;
+    let refusal = crate::browser_fixture::capture_path()?.with_file_name(".browser-refuse");
+    std::fs::write(&refusal, "synthetic browser failure")?;
     updates::apply(&installation, &preview.id, true).await?;
     if terminal(&installation, &preview.id).await? != Phase::RolledBack {
         return Err("La mauvaise version exécutée n’a pas déclenché le rollback.".into());
     }
+    crate::browser_fixture::wait_for_open().await?;
     let reason = updates::status(Some(&installation))?
         .operation
         .ok_or("Journal du scénario négatif absent.")?
@@ -543,6 +551,13 @@ async fn test_inner(original: Option<&Path>, prepared_successor: Option<&Path>) 
         .is_none_or(|cards| !cards.contains(&card))
     {
         return Err("La récupération a modifié une conversation.".into());
+    }
+    std::fs::remove_file(refusal)?;
+    if updates::status(Some(&installation))?
+        .operation
+        .is_none_or(|operation| operation.state != Phase::RolledBack)
+    {
+        return Err("A browser failure invalidated a verified rollback".into());
     }
     launcher::stop(&data, port).await?;
     let deadline = Instant::now() + Duration::from_secs(10);

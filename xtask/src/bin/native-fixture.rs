@@ -54,6 +54,35 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .collect::<Vec<_>>()
         .as_slice()
     {
+        [address] if std::env::var_os("ATELIER_BROWSER_CAPTURE").is_some()
+            && (address.starts_with("http://127.0.0.1:") || address.starts_with("file:")) => {
+            let path = std::path::PathBuf::from(std::env::var_os("ATELIER_BROWSER_CAPTURE").ok_or("Synthetic browser capture missing")?);
+            let parent = path.parent().ok_or("Synthetic browser directory missing")?;
+            if !path.is_absolute() || std::fs::read_to_string(parent.join(".browser-fixture"))? != "atelier-synthetic-browser-only" {
+                return Err("Synthetic browser scope marker missing".into());
+            }
+            let url = reqwest::Url::parse(address)?;
+            if address.len() > 12000 || !(url.scheme() == "file" || (url.scheme() == "http" && url.host_str() == Some("127.0.0.1"))) {
+                return Err("Synthetic browser address invalid".into());
+            }
+            if let Some(root) = std::env::var_os("ATELIER_BROWSER_INSTALLATION") {
+                use atelier_core::application::updates::Phase;
+                let status = atelier_app::infrastructure::updates::status(Some(std::path::Path::new(&root))).map_err(|error| error.to_string())?;
+                if !status.operation.is_some_and(|operation| matches!(operation.state, Phase::Committed | Phase::RolledBack)) {
+                    return Err("Browser opened before a verified terminal update result".into());
+                }
+            }
+            let bytes = serde_json::to_vec(address)?;
+            let mut options = std::fs::OpenOptions::new();
+            options.write(true).create(true).truncate(true);
+            #[cfg(unix)]
+            { use std::os::unix::fs::OpenOptionsExt; options.mode(0o600); }
+            options.open(&path)?.write_all(&bytes)?;
+            if parent.join(".browser-refuse").try_exists()? {
+                return Err("Synthetic browser refused the open request".into());
+            }
+            Ok(())
+        }
         [] => fake_extension::run(),
         ["review-json"] => {
             use std::io::Read;

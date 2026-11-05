@@ -4,6 +4,7 @@ use std::{
     process::{Command, Stdio},
 };
 
+mod browser_fixture;
 mod installers;
 mod inventory;
 mod keyring;
@@ -135,6 +136,9 @@ fn validate_ui_assets(directory: &Path) -> Result<()> {
 #[tokio::main]
 async fn main() -> Result<()> {
     let args: Vec<_> = std::env::args().skip(1).collect();
+    if browser_fixture::run_isolated(&args)? {
+        return Ok(());
+    }
     match args.iter().map(String::as_str).collect::<Vec<_>>().as_slice() {
         ["inventory"] => inventory::command(false),
         ["inventory", "--check"] => inventory::command(true),

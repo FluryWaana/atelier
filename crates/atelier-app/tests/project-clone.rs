@@ -87,8 +87,10 @@ async fn clone_http_boundary_requires_confirmation_and_cancels_without_registeri
         .await
         .unwrap()
         .unwrap();
-    assert!(!response.status().is_success());
-    assert_eq!(std::fs::read_dir(&parent).unwrap().count(), 0);
+    let status = response.status();
+    let result: serde_json::Value = response.json().await.unwrap();
+    assert!(!status.is_success(), "{result}");
+    assert_eq!(std::fs::read_dir(&parent).unwrap().count(), 0, "{result}");
     let state: serde_json::Value = client
         .get(format!("{address}/api/state"))
         .bearer_auth(&token)
