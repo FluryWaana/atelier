@@ -5149,6 +5149,7 @@ async fn type_text(client: &Client, selector: &str, text: &str) -> Result<()> {
     let element = editable(client, selector).await?;
     element.click().await?;
     if std::env::var("ATELIER_TEST_BROWSER").as_deref() == Ok("safari") {
+        client.execute("const element=document.querySelector(arguments[0]);element.__atelierTypingTrace=[];if(!element.__atelierTypingRecorder){element.__atelierTypingRecorder=true;const record=(type,event)=>{const trace=element.__atelierTypingTrace;trace.push({type,data:event.data,inputType:event.inputType,isComposing:event.isComposing,key:event.key,ctrl:event.ctrlKey,alt:event.altKey,meta:event.metaKey,shift:event.shiftKey,value:element.value,start:element.selectionStart,end:element.selectionEnd,focused:document.activeElement===element});if(trace.length>16)trace.shift();};for(const type of ['keydown','keyup','beforeinput','input','compositionstart','compositionupdate','compositionend'])element.addEventListener(type,event=>{record(type,event);if(type==='input')requestAnimationFrame(()=>record('rendered',event));},{passive:true});}",vec![json!(selector)]).await?;
         // Serialize Safari's native input with reactive updates instead of sending a burst.
         let mut expected = String::new();
         for character in text.chars() {
@@ -5161,8 +5162,9 @@ async fn type_text(client: &Client, selector: &str, text: &str) -> Result<()> {
                 )
                 .await?;
             if actual != json!(expected) {
+                let trace=client.execute("const element=document.querySelector(arguments[0]);return {trace:element?.__atelierTypingTrace,autocorrect:element?.getAttribute('autocorrect'),writingsuggestions:element?.getAttribute('writingsuggestions'),autocomplete:element?.autocomplete};",vec![json!(selector)]).await?;
                 return Err(
-                    format!("Saisie native Safari incomplète dans {selector} : {actual}").into(),
+                    format!("Saisie native Safari incomplète dans {selector}, caractère {character:?} à la position {} : {actual}; événements synthétiques : {trace}", expected.chars().count()).into(),
                 );
             }
         }

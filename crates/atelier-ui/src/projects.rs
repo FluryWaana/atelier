@@ -5,6 +5,7 @@ use atelier_core::document::Document;
 use atelier_core::domain::agent_options::providers;
 use gloo_net::http::Method;
 use leptos::prelude::*;
+use leptos::tachys::html::attribute::custom::custom_attribute;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
 
@@ -871,6 +872,9 @@ pub fn Projects(
                                             required=true
                                             maxlength="2000"
                                             spellcheck="false"
+                                            autocapitalize="off"
+                                            autocomplete="off"
+                                            {..(custom_attribute("autocorrect", "off"), custom_attribute("writingsuggestions", "false"))}
                                             readonly={move || repository_locked.get()}
                                             prop:value={move || draft.get().repo}
                                             on:input={move |event| {
@@ -1299,6 +1303,8 @@ pub fn Projects(
                             <crate::form::Field id="project-clone-parent" label={Signal::derive(move || i18n.text("message.clone_parent"))}>
                                 <div class="directory-picker">
                                     <crate::form::Input {..} id="project-clone-parent" required=true maxlength="1800"
+                                        spellcheck="false" autocapitalize="off" autocomplete="off"
+                                        {..(custom_attribute("autocorrect", "off"), custom_attribute("writingsuggestions", "false"))}
                                         prop:value={move || clone_draft.get().parent}
                                         on:input={move |event| clone_draft.update(|value| value.parent = event_target_value(&event))}/>
                                     <crate::button::Button {..} id="browse-clone-parent" type="button" on:click={move |_| browse()}>
@@ -1309,6 +1315,8 @@ pub fn Projects(
                             <crate::form::Field id="project-clone-directory" label={Signal::derive(move || i18n.text("message.clone_directory"))}
                                 help={Signal::derive(move || i18n.text("message.clone_destination_help"))}>
                                 <crate::form::Input {..} id="project-clone-directory" required=true maxlength="100"
+                                    spellcheck="false" autocapitalize="off" autocomplete="off"
+                                    {..(custom_attribute("autocorrect", "off"), custom_attribute("writingsuggestions", "false"))}
                                     prop:value={move || clone_draft.get().directory}
                                     on:input={move |event| clone_draft.update(|value| value.directory = event_target_value(&event))}/>
                             </crate::form::Field>
@@ -1324,6 +1332,10 @@ pub fn Projects(
                                     id="project-directory"
                                     required=true
                                     maxlength="2000"
+                                    spellcheck="false"
+                                    autocapitalize="off"
+                                    autocomplete="off"
+                                    {..(custom_attribute("autocorrect", "off"), custom_attribute("writingsuggestions", "false"))}
                                     prop:value={move || draft.get().repo}
                                     on:input={move |event| {
                                         draft.update(|draft| draft.repo = event_target_value(&event))
@@ -1627,6 +1639,9 @@ fn ProjectServices(
                                         id={format!("project-{role}-repo")}
                                         maxlength="2000"
                                         spellcheck="false"
+                                        autocapitalize="off"
+                                        autocomplete="off"
+                                        {..(custom_attribute("autocorrect", "off"), custom_attribute("writingsuggestions", "false"))}
                                         placeholder={move || i18n.text("message.main_repository_when_empty")}
                                         prop:value={move || draft.get().services[index].repo.clone()}
                                         on:input={move |event| {
@@ -1657,6 +1672,9 @@ fn ProjectServices(
                                         id={format!("project-{role}-directory")}
                                         maxlength="2000"
                                         spellcheck="false"
+                                        autocapitalize="off"
+                                        autocomplete="off"
+                                        {..(custom_attribute("autocorrect", "off"), custom_attribute("writingsuggestions", "false"))}
                                         placeholder={move || i18n.text("message.worktree_root_when_empty")}
                                         prop:value={move || draft.get().services[index].directory.clone()}
                                         on:input={move |event| {
